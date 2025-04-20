@@ -1,0 +1,60 @@
+#!/bin/bash
+
+# Run gleam tests first
+echo "Running gleam tests..."
+gleam test
+if [ $? -ne 0 ]; then
+  echo "ERROR: Tests failed. Fix the tests before committing."
+  exit 1
+fi
+
+# Path to files
+README_PATH="README.md"
+EXAMPLES_PATH="test/aonyx_graph_examples.gleam"
+
+# Check if the files exist
+if [ ! -f "$README_PATH" ]; then
+  echo "ERROR: $README_PATH does not exist."
+  exit 1
+fi
+
+if [ ! -f "$EXAMPLES_PATH" ]; then
+  echo "ERROR: $EXAMPLES_PATH does not exist."
+  exit 1
+fi
+
+# Extract the code from the examples file
+EXAMPLE_CODE=$(cat "$EXAMPLES_PATH")
+
+# Update the README.md file
+# We'll use awk to replace the code block between markers
+awk -v code="$EXAMPLE_CODE" '
+BEGIN {
+  in_code_block = 0
+  code_started = 0
+}
+/```gleam/ && !code_started {
+  print
+  print code
+  in_code_block = 1
+  code_started = 1
+  next
+}
+/```/ && in_code_block {
+  in_code_block = 0
+  print
+  next
+}
+!in_code_block {
+  print
+}
+' "$README_PATH" > temp_readme
+
+# Replace the original README with the updated one
+mv temp_readme "$README_PATH"
+
+# Add the updated README to git staging area
+git add "$README_PATH"
+
+echo "README.md has been updated with the latest example code."
+exit 0
