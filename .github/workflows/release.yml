@@ -1,0 +1,44 @@
+name: release
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history for tags and commits
+
+      - name: Setup BEAM
+        uses: erlef/setup-beam@v1
+        with:
+          otp-version: "27.1.2"
+          gleam-version: "1.10.0"
+          rebar3-version: "3"
+      
+      - name: Semantic versioning
+        id: semver
+        uses: PaulHatch/semantic-version@v5.4.0
+        with:
+          tag_prefix: "v"
+          version_format: "${major}.${minor}.${patch}-preview.${increment}"
+      
+      - name: Update version in gleam.toml
+        run: |
+          sed -i "s/^version = \".*\"/version = \"${{ steps.semver.outputs.is_tagged && steps.semver.outputs.version || format('{0}-preview.{1}', steps.semver.outputs.version, steps.semver.outputs.increment) }}\"/" gleam.toml
+          
+      - run: gleam format --check
+      - run: gleam deps download
+      - run: gleam test --target erlang
+      - run: gleam test --target javascript
+          
+      - run: gleam publish -y
+        env:
+          HEXPM_API_KEY: ${{ secrets.HEXPM_API_KEY }}
