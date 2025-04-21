@@ -138,22 +138,7 @@ fn path_finding(g: graph.Graph(String, _, _)) {
 }
 ```
 
-## Development
+## Contributing
 
-```sh
-gleam test # Run the tests
-gleam run -m aonyx_graph_examples # Run the examples
-```
-
-## Pre-commit Hooks
-
-This repository includes a pre-commit hook that automatically updates the code examples in this README with the latest content from the `test/aonyx_graph_examples.gleam` file.
-
-To set up the hook in your local repository:
-
-```sh
-git config core.hooksPath .githooks
-```
-
-After setting this up, whenever you make a commit, the hook will automatically update the README.md with the latest code examples and include it in your commit.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for information on development setup and contributing to the project.
 
