@@ -10,6 +10,8 @@ on:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -28,17 +30,26 @@ jobs:
         uses: PaulHatch/semantic-version@v5.4.0
         with:
           tag_prefix: "v"
-          version_format: "${major}.${minor}.${patch}-preview.${increment}"
+          version_format: "${major}.${minor}.${patch}"
       
       - name: Update version in gleam.toml
         run: |
-          sed -i "s/^version = \".*\"/version = \"${{ steps.semver.outputs.is_tagged && steps.semver.outputs.version || format('{0}-preview.{1}', steps.semver.outputs.version, steps.semver.outputs.increment) }}\"/" gleam.toml
-          
+          sed -i "s/^version = \".*\"/version = \"${{ steps.semver.outputs.is_tagged && steps.semver.outputs.version || format('{0}-preview.{1}', steps.semver.outputs.version, steps.semver.outputs.increment ) }}\"/" gleam.toml
+                    
       - run: gleam format --check
       - run: gleam deps download
       - run: gleam test --target erlang
       - run: gleam test --target javascript
           
-      - run: gleam publish -y
+      - name: Publish to Hex.pm
+        run: |
+          if [[ "${{ steps.semver.outputs.is_tagged }}" == "true" ]]; then
+            gleam publish -y
+          else
+            echo "Skipping publish - not a tagged release"
+          fi
         env:
           HEXPM_API_KEY: ${{ secrets.HEXPM_API_KEY }}
+
+      - uses: softprops/action-gh-release@v2
+        if: ${{ steps.semver.outputs.is_tagged }}
