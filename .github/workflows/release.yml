@@ -2,10 +2,7 @@ name: release
 
 on:
   push:
-    branches:
-      - main
-    tags:
-      - 'v*'
+    tags: ["v*"]
 
 jobs:
   publish:
@@ -13,43 +10,31 @@ jobs:
     permissions:
       contents: write
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v3.1.0
+      - uses: erlef/setup-beam@v1.18.2
         with:
-          fetch-depth: 0  # Fetch all history for tags and commits
-
-      - name: Setup BEAM
-        uses: erlef/setup-beam@v1
-        with:
-          otp-version: "27.1.2"
-          gleam-version: "1.10.0"
+          otp-version: "27.0"
           rebar3-version: "3"
-      
-      - name: Semantic versioning
-        id: semver
-        uses: PaulHatch/semantic-version@v5.4.0
-        with:
-          tag_prefix: "v"
-          version_format: "${major}.${minor}.${patch}"
-      
-      - name: Update version in gleam.toml
-        run: |
-          sed -i "s/^version = \".*\"/version = \"${{ steps.semver.outputs.is_tagged && steps.semver.outputs.version || format('{0}-preview.{1}', steps.semver.outputs.version, steps.semver.outputs.increment ) }}\"/" gleam.toml
-                    
-      - run: gleam format --check
-      - run: gleam deps download
-      - run: gleam test --target erlang
-      - run: gleam test --target javascript
-          
-      - name: Publish to Hex.pm
-        run: |
-          if [[ "${{ steps.semver.outputs.is_tagged }}" == "true" ]]; then
-            gleam publish -y
-          else
-            echo "Skipping publish - not a tagged release"
+          gleam-version: "1.10.0"
+
+      - run: |
+          version="v$(cat gleam.toml | grep -m 1 "version" | sed -r "s/version *= *\"([[:digit:].]+)\"/\1/")"
+          if [ "$version" != "${{ github.ref_name }}" ]; then
+            echo "tag '${{ github.ref_name }}' does not match the version in gleam.toml"
+            echo "expected a tag name 'v$version'"
+            exit 1
           fi
+
+        name: check version
+
+      - run: gleam format --check
+
+      - run: gleam test --target erlang
+
+      - run: gleam test --target javascript
+
+      - run: gleam publish -y --replace
         env:
           HEXPM_API_KEY: ${{ secrets.HEXPM_API_KEY }}
 
       - uses: softprops/action-gh-release@v2
-        if: ${{ steps.semver.outputs.is_tagged }}
