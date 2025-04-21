@@ -1,4 +1,4 @@
-import aonyx/graph/edge.{type Edge, type EdgeKey, Edge, EdgeKey}
+import aonyx/graph/edge.{type Edge, type EdgeKey, EdgeKey}
 import aonyx/graph/node.{type Node, type NodeKey, Node, NodeKey}
 import gleam/dict
 import gleam/list
@@ -28,14 +28,6 @@ pub fn new() -> Graph(key, value, label) {
 /// Returns a list of all edges in the graph.
 pub fn get_edges(graph: Graph(key, value, label)) -> List(Edge(key, label)) {
   graph.edges
-  |> dict.map_values(fn(edge_internal, edge_info_internal) {
-    Edge(
-      edge_internal.from,
-      edge_internal.to,
-      edge_info_internal.label,
-      edge_info_internal.weight,
-    )
-  })
   |> dict.values()
 }
 
