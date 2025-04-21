@@ -137,8 +137,3 @@ fn path_finding(g: graph.Graph(String, _, _)) {
   |> should.equal(["A", "D", "G", "H"])
 }
 ```
-
-## Contributing
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for information on development setup and contributing to the project.
-
