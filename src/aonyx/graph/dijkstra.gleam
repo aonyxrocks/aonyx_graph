@@ -1,7 +1,7 @@
 import aonyx/graph
 import aonyx/graph/node
 import gleam/dict
-import gleam/int
+import gleam/float
 import gleam/list
 import gleam/option
 import gleam/order
@@ -9,12 +9,13 @@ import gleam/result
 import gleam/set
 
 type Node(key) {
-  Node(key: key, previous: option.Option(key), distance: Int)
+  Node(key: key, previous: option.Option(key), distance: Float)
 }
 
 type PathSearch(key) {
   PathSearch(
     get_neighbors: fn(key) -> set.Set(key),
+    get_edge_weight: fn(key, key) -> Float,
     nodes: dict.Dict(key, Node(key)),
     open_set: set.Set(key),
   )
@@ -25,10 +26,10 @@ fn update_node(
   path_search: PathSearch(key),
   key: key,
   previous: key,
-  distance: Int,
+  distance: Float,
 ) -> PathSearch(key) {
   case path_search.nodes |> dict.get(key) {
-    Ok(node) if node.distance <= distance -> path_search
+    Ok(node) if node.distance <=. distance -> path_search
     _ -> {
       let node = Node(key:, distance:, previous: option.Some(previous))
       PathSearch(
@@ -45,11 +46,12 @@ fn update_node(
 fn update_neighbors(
   path_search: PathSearch(key),
   current: key,
-  current_distance: Int,
+  current_distance: Float,
 ) -> PathSearch(key) {
-  let tentative_distance = current_distance + 1
   path_search.get_neighbors(current)
   |> set.fold(path_search, fn(ps, k) {
+    let edge_weight = path_search.get_edge_weight(current, k)
+    let tentative_distance = current_distance +. edge_weight
     ps |> update_node(k, current, tentative_distance)
   })
 }
@@ -83,7 +85,9 @@ fn get_current(
     nodes
     |> dict.get(k)
   })
-  |> list.max(fn(a, b) { int.compare(a.distance, b.distance) |> order.negate() })
+  |> list.max(fn(a, b) {
+    float.compare(a.distance, b.distance) |> order.negate()
+  })
 }
 
 /// Recursively searches for the shortest path from start to goal.
@@ -113,6 +117,8 @@ fn find_path_internal(
 /// Uses Dijkstra's algorithm to exhaustively search for the shortest path from start to goal in the graph.
 /// If a path can be found, it is guaranteed to be the shortest one.
 /// The returned list represents the path in order from the start node to the goal node, or None when no path can be found.
+/// 
+/// Note: Since Dijkstra's algorithm is susceptible to negative cycles, negative weights are clamped to 0.0 to avoid infinite loops. None values are treated as 1.0.
 pub fn find_path(
   graph: graph.Graph(key, value, label),
   start: key,
@@ -124,10 +130,20 @@ pub fn find_path(
     |> result.map(node.get_neighbors_out)
     |> result.unwrap(set.new())
   }
+  let get_edge_weight = fn(a, b) {
+    graph
+    |> graph.get_edge(a, b)
+    |> option.from_result()
+    |> option.map(fn(edge) { edge.weight })
+    |> option.flatten()
+    |> option.unwrap(1.0)
+    |> float.max(0.0)
+  }
   PathSearch(
     get_neighbors: get_neighbors,
+    get_edge_weight: get_edge_weight,
     nodes: {
-      [#(start, Node(key: start, distance: 0, previous: option.None))]
+      [#(start, Node(key: start, distance: 0.0, previous: option.None))]
       |> dict.from_list()
     },
     open_set: { [start] |> set.from_list() },

@@ -163,3 +163,37 @@ pub fn find_path_none_test() {
   |> dijkstra.find_path("c", "a")
   |> should.be_none()
 }
+
+pub fn find_path_weighted_test() {
+  let graph =
+    [
+      edge.new("a", "b") |> edge.with_weight(5.0),
+      edge.new("b", "c") |> edge.with_weight(2.0),
+      edge.new("a", "c"),
+      edge.new("c", "d"),
+      edge.new("c", "e") |> edge.with_weight(3.0),
+      edge.new("d", "e") |> edge.with_weight(5.0),
+    ]
+    |> list.fold(graph.new(), graph.insert_edge)
+
+  graph
+  |> dijkstra.find_path("a", "e")
+  |> should.be_some()
+  |> should.equal(["a", "c", "e"])
+}
+
+pub fn find_path_negative_cycle_test() {
+  let graph =
+    [
+      edge.new("a", "b") |> edge.with_weight(-1.0),
+      edge.new("b", "c") |> edge.with_weight(-1.0),
+      edge.new("c", "a") |> edge.with_weight(-1.0),
+      edge.new("c", "d") |> edge.with_weight(1.0),
+    ]
+    |> list.fold(graph.new(), graph.insert_edge)
+
+  graph
+  |> dijkstra.find_path("a", "d")
+  |> should.be_some()
+  |> should.equal(["a", "b", "c", "d"])
+}
