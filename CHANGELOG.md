@@ -10,6 +10,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Future changes will be listed here
 
+## [1.0.1] - 2025-04-21
+
+### Changed
+- Simplified release workflow by removing unnecessary steps
+- Updated version format in CI pipeline
+- Improved release workflow permissions
+
+### Documentation
+- Removed contributing section from README
+- Added separate CONTRIBUTING.md guidelines
+
+## [1.0.0] - 2025-04-20
+
+### Added
+- Setup release pipeline
+- Added conventional commits enforcement using git hook
+
+### Changed
+- Refactored get_edges function to remove redundant mapping
+
 ## [0.1.0] - 2025-04-20
 
 ### Added
@@ -21,5 +41,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Node and edge customization (labels, weights, values)
 - Support for automatic node creation when adding edges
 
-[Unreleased]: https://github.com/aonyxrocks/aonyx_graph/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/aonyxrocks/aonyx_graph/compare/v1.0.1...HEAD
+[1.0.1]: https://github.com/aonyxrocks/aonyx_graph/compare/v1.0.0...v1.0.1
+[1.0.0]: https://github.com/aonyxrocks/aonyx_graph/compare/v0.1.0...v1.0.0
 [0.1.0]: https://github.com/aonyxrocks/aonyx_graph/releases/tag/v0.1.0
