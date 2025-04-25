@@ -3,6 +3,7 @@ import aonyx/graph/dijkstra
 import aonyx/graph/edge
 import aonyx/graph/node
 import gleam/list
+import gleam/option
 import gleam/set
 import gleeunit
 import gleeunit/should
@@ -13,10 +14,9 @@ pub fn main() {
 
 fn graph_fixture() {
   let graph =
-    graph.new()
-    |> list.fold(["a", "b", "c"], _, fn(g, node_key) {
-      g |> graph.insert_node(node.new(node_key))
-    })
+    ["a", "b", "c"]
+    |> list.map(node.new)
+    |> list.fold(graph.new(), graph.insert_node)
 
   graph
 }
@@ -40,15 +40,13 @@ pub fn add_edge_ok_test() {
   |> graph.get_node("a")
   |> should.be_ok()
   |> node.get_neighbors()
-  |> set.to_list()
-  |> should.equal(["b"])
+  |> should.equal(set.from_list(["b"]))
 
   graph
   |> graph.get_node("b")
   |> should.be_ok()
   |> node.get_neighbors()
-  |> set.to_list()
-  |> should.equal(["a"])
+  |> should.equal(set.from_list(["a"]))
 
   graph
   |> graph.get_node("c")
@@ -95,15 +93,13 @@ pub fn insert_edge_ok_test() {
   |> graph.get_node("a")
   |> should.be_ok()
   |> node.get_neighbors()
-  |> set.to_list()
-  |> should.equal(["b"])
+  |> should.equal(set.from_list(["b"]))
 
   graph
   |> graph.get_node("b")
   |> should.be_ok()
   |> node.get_neighbors()
-  |> set.to_list()
-  |> should.equal(["a", "c"])
+  |> should.equal(set.from_list(["a", "c"]))
 }
 
 pub fn remove_node_test() {
@@ -135,6 +131,58 @@ pub fn remove_node_test() {
   |> graph.get_node("b")
   |> should.be_error()
   |> should.equal(graph.NodeNotFoundError("b"))
+}
+
+pub fn re_insert_node_without_edges_test() {
+  let graph =
+    graph_fixture()
+    |> graph.insert_edge(edge.new("a", "b"))
+    |> graph.insert_edge(edge.new("a", "c"))
+    |> graph.insert_edge(edge.new("b", "c"))
+    |> graph.insert_node(node.new("a"))
+
+  graph
+  |> graph.get_node("a")
+  |> should.be_ok()
+  |> node.get_neighbors()
+  |> should.equal(set.new())
+
+  graph
+  |> graph.get_node("b")
+  |> should.be_ok()
+  |> node.get_neighbors()
+  |> should.equal(set.from_list(["c"]))
+
+  graph
+  |> graph.get_node("c")
+  |> should.be_ok()
+  |> node.get_neighbors()
+  |> should.equal(set.from_list(["b"]))
+}
+
+pub fn get_edge_test() {
+  let graph =
+    graph_fixture()
+    |> graph.insert_edge(edge.new("a", "b") |> edge.with_label("test label"))
+
+  // Test getting an existing edge
+  graph
+  |> graph.get_edge("a", "b")
+  |> should.be_ok()
+  |> fn(e) { e.label }
+  |> should.equal(option.Some("test label"))
+
+  // Test error when edge doesn't exist
+  graph
+  |> graph.get_edge("a", "c")
+  |> should.be_error()
+  |> should.equal(graph.EdgeNotFoundError("a", "c"))
+
+  // Test error when both nodes don't exist
+  graph
+  |> graph.get_edge("x", "y")
+  |> should.be_error()
+  |> should.equal(graph.EdgeNotFoundError("x", "y"))
 }
 
 pub fn find_path_some_test() {

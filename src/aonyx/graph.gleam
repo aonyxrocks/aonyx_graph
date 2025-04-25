@@ -73,7 +73,7 @@ fn insert_edge_internal(
 
 /// Inserts an edge into the graph.
 /// If a node does not exist in the graph, it is created.
-/// If the edge already exists, its info is updated.
+/// If the edge already exists, it is replaced.
 pub fn insert_edge(
   graph: Graph(key, value, label),
   edge: Edge(key, label),
@@ -140,28 +140,93 @@ pub fn get_nodes(graph: Graph(key, value, label)) -> List(Node(key, value)) {
   |> dict.values()
 }
 
+fn insert_node_internal(
+  graph: Graph(key, value, label),
+  node: Node(key, value),
+) -> Graph(key, value, label) {
+  let existing_node =
+    graph.nodes
+    |> dict.get(node.get_key(node))
+    |> option.from_result()
+
+  let existing_outgoing =
+    existing_node
+    |> option.map(fn(existing) { existing.outgoing })
+    |> option.unwrap(set.new())
+
+  let existing_incoming =
+    existing_node
+    |> option.map(fn(existing) { existing.incoming })
+    |> option.unwrap(set.new())
+
+  let new_outgoing =
+    node.outgoing
+    |> set.difference(existing_outgoing)
+    |> set.map(fn(to) { edge.new(node.key, to) })
+
+  let new_incoming =
+    node.incoming
+    |> set.difference(existing_incoming)
+    |> set.map(fn(from) { edge.new(from, node.key) })
+
+  let removed_incoming =
+    existing_incoming
+    |> set.difference(node.incoming)
+    |> set.map(fn(from) { edge.new(from, node.key) })
+
+  let removed_outgoing =
+    existing_outgoing
+    |> set.difference(node.outgoing)
+    |> set.map(fn(to) { edge.new(node.key, to) })
+
+  let graph =
+    removed_incoming
+    |> set.union(removed_outgoing)
+    |> set.map(edge.get_key)
+    |> set.fold(graph, remove_edge_internal)
+
+  let graph =
+    Graph(..graph, nodes: graph.nodes |> dict.insert(node.get_key(node), node))
+
+  let graph =
+    new_outgoing
+    |> set.union(new_incoming)
+    |> set.fold(graph, insert_edge_internal)
+
+  graph
+}
+
 /// Inserts a node into the graph.
-/// If a node with the same key already exists, its value is updated.
-/// If the node has incoming or outgoing edges, they are added to the graph.
+/// If a node with the same key already exists, it is replaced.
+/// 
+/// New edges are added to the graph.
+/// Edges in the graph that are not present in the inserted node are removed.
+/// Existing edges remain unchanged.
 /// If any of the target nodes do not exist, they are created.
 pub fn insert_node(
   graph: Graph(key, value, label),
   node: Node(key, value),
 ) -> Graph(key, value, label) {
+  insert_node_internal(graph, node)
+}
+
+fn remove_node_internal(
+  graph: Graph(key, value, label),
+  node: Node(key, value),
+) -> Graph(key, value, label) {
   let graph =
-    Graph(..graph, nodes: graph.nodes |> dict.insert(node.get_key(node), node))
+    graph.edges
+    |> dict.filter(fn(edge, _) {
+      let EdgeKey(from, to) = edge
+      from == node.key || to == node.key
+    })
+    |> dict.fold(graph, fn(g, edge_key, _) { remove_edge_internal(g, edge_key) })
 
-  let edges_outgoing =
-    node.outgoing
-    |> set.map(fn(to) { edge.new(node.key, to) })
-
-  let edges_incoming =
-    node.incoming
-    |> set.map(fn(from) { edge.new(from, node.key) })
-
-  edges_outgoing
-  |> set.union(edges_incoming)
-  |> set.fold(graph, insert_edge_internal)
+  Graph(
+    ..graph,
+    nodes: graph.nodes
+      |> dict.delete(node.get_key(node)),
+  )
 }
 
 /// Removes a node and all its edges from the graph.
@@ -170,19 +235,7 @@ pub fn remove_node(
   graph: Graph(key, value, label),
   node: Node(key, value),
 ) -> Graph(key, value, label) {
-  let Graph(nodes, edges) =
-    graph.edges
-    |> dict.filter(fn(edge, _) {
-      let EdgeKey(from, to) = edge
-      from == node.key || to == node.key
-    })
-    |> dict.fold(graph, fn(graph, edge, _) {
-      graph |> remove_edge_internal(edge)
-    })
-
-  let nodes = nodes |> dict.delete(node.get_key(node))
-
-  Graph(nodes:, edges:)
+  remove_node_internal(graph, node)
 }
 
 /// Returns the node from the graph with the given key, or an error when the node does not exist.

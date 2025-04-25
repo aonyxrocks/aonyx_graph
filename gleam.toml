@@ -1,5 +1,5 @@
 name = "aonyx_graph"
-version = "1.0.2"
+version = "1.0.3"
 gleam = ">= 1.10.0"
 
 description = "A graph library. Including path finding."
