@@ -1,14 +1,19 @@
 import aonyx/graph
+import aonyx/graph/astar
 import aonyx/graph/dijkstra
 import aonyx/graph/edge
 import aonyx/graph/node
+import gleam/float
 import gleam/list
+import gleam/result
 import gleam/set
 import gleeunit/should
 
 pub fn main() {
   creating_and_modifying_a_graph()
   |> path_finding()
+
+  path_finding_with_a_star()
 }
 
 fn creating_and_modifying_a_graph() {
@@ -59,22 +64,19 @@ fn creating_and_modifying_a_graph() {
   |> graph.get_node("A")
   |> should.be_ok()
   |> node.get_neighbors_out()
-  |> set.to_list()
-  |> should.equal(["B", "D"])
+  |> should.equal(set.from_list(["B", "D"]))
 
   g
   |> graph.get_node("B")
   |> should.be_ok()
   |> node.get_neighbors_in()
-  |> set.to_list()
-  |> should.equal(["A"])
+  |> should.equal(set.from_list(["A"]))
 
   g
   |> graph.get_node("B")
   |> should.be_ok()
   |> node.get_neighbors()
-  |> set.to_list()
-  |> should.equal(["A", "C", "E"])
+  |> should.equal(set.from_list(["A", "C", "E"]))
 
   g
 }
@@ -115,4 +117,51 @@ fn path_finding(g: graph.Graph(String, _, _)) {
   |> dijkstra.find_path("A", "H")
   |> should.be_some()
   |> should.equal(["A", "D", "G", "H"])
+}
+
+fn path_finding_with_a_star() {
+  // A* is a pathfinding algorithm that uses heuristics to find the shortest path in a graph.
+  // It is more efficient than Dijkstra's algorithm in many cases, especially when the graph is large and sparse.
+  // The A* algorithm uses a heuristic function to estimate the cost of reaching the goal from a given node.
+  // The heuristic function must be admissive, meaning it never overestimates the cost.
+  // A common heuristic function is the Euclidean distance between two points in a 2D space.
+  // In this example, we will use the Euclidean distance as the heuristic function for A*.
+  // The heuristic function takes two values (in this case, 2D coordinates) and returns the Euclidean distance between them.
+  let euclidean_distance = fn(a, b) {
+    let #(ax, ay) = a
+    let #(bx, by) = b
+    let dx = ax -. bx
+    let dy = ay -. by
+    let assert Ok(d) = float.square_root(dx *. dx +. dy *. dy)
+    d
+  }
+
+  let g =
+    [
+      node.new("A") |> node.with_value(#(0.0, 0.0)),
+      node.new("B") |> node.with_value(#(0.0, 1.0)),
+      node.new("C") |> node.with_value(#(0.5, 0.5)),
+      node.new("D") |> node.with_value(#(1.0, 1.0)),
+    ]
+    |> list.fold(graph.new(), graph.insert_node)
+    // add edges with approximate weights (rounded up from the euclidean distance)
+    |> graph.insert_edge(edge.new("A", "B") |> edge.with_weight(1.1))
+    |> graph.insert_edge(edge.new("A", "C") |> edge.with_weight(0.8))
+    |> graph.insert_edge(edge.new("B", "D") |> edge.with_weight(1.2))
+    |> graph.insert_edge(edge.new("C", "D") |> edge.with_weight(0.8))
+
+  // this builds a graph with node values representing 2D coordinates:
+  // A
+  // |\
+  // | C
+  // |  \
+  // B - D
+
+  let path =
+    g
+    |> astar.find_path("A", "D", euclidean_distance)
+
+  path
+  |> should.be_some()
+  |> should.equal(["A", "C", "D"])
 }

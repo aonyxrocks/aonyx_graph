@@ -5,6 +5,11 @@ All notable changes to the aonyx_graph project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2025-05-01
+
+### Added
+- A* algorithm
+
 ## [1.0.3] - 2025-04-25
 
 ### Fixed
@@ -46,7 +51,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Node and edge customization (labels, weights, values)
 - Support for automatic node creation when adding edges
 
-[Unreleased]: https://github.com/aonyxrocks/aonyx_graph/compare/v1.0.1...HEAD
+[Unreleased]: https://github.com/aonyxrocks/aonyx_graph/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/aonyxrocks/aonyx_graph/compare/v1.0.3...v1.1.0
+[1.0.3]: https://github.com/aonyxrocks/aonyx_graph/compare/v1.0.2...v1.0.3
 [1.0.2]: https://github.com/aonyxrocks/aonyx_graph/compare/v1.0.1...v1.0.2
 [1.0.1]: https://github.com/aonyxrocks/aonyx_graph/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/aonyxrocks/aonyx_graph/compare/v0.1.0...v1.0.0

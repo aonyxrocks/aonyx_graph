@@ -1,9 +1,14 @@
 import aonyx/graph
+import aonyx/graph/astar
 import aonyx/graph/dijkstra
 import aonyx/graph/edge
 import aonyx/graph/node
+import gleam/dict
+import gleam/erlang/process
+import gleam/float
 import gleam/list
 import gleam/option
+import gleam/otp/actor
 import gleam/set
 import gleeunit
 import gleeunit/should
@@ -244,4 +249,187 @@ pub fn find_path_negative_cycle_test() {
   |> dijkstra.find_path("a", "d")
   |> should.be_some()
   |> should.equal(["a", "b", "c", "d"])
+}
+
+type CounterMsg(key) {
+  Stop(reply_with: process.Subject(dict.Dict(key, Int)))
+  Incr(key)
+}
+
+fn start_counter() {
+  let assert Ok(counter) =
+    actor.start(dict.new(), fn(msg, s) {
+      case msg {
+        Stop(client) -> {
+          client |> actor.send(s)
+          actor.Stop(process.Normal)
+        }
+        Incr(key) ->
+          actor.continue(
+            s
+            |> dict.upsert(key, fn(v) {
+              case v {
+                option.Some(v) -> v + 1
+                option.None -> 1
+              }
+            }),
+          )
+      }
+    })
+
+  counter
+}
+
+pub fn find_path_astar_visited_nodes_test() {
+  // Define the Euclidean distance function
+  let euclidean_distance = fn(a, b) {
+    let #(ax, ay) = a
+    let #(bx, by) = b
+    let dx = ax -. bx
+    let dy = ay -. by
+    let assert Ok(d) = float.square_root(dx *. dx +. dy *. dy)
+    d
+  }
+
+  let insert_edge_with_euclidean_distance = fn(graph, a, b) {
+    {
+      use a_node <- option.then(
+        graph |> graph.get_node(a) |> option.from_result,
+      )
+      use b_node <- option.then(
+        graph |> graph.get_node(b) |> option.from_result,
+      )
+      use a_value <- option.then(a_node.value)
+      use b_value <- option.then(b_node.value)
+
+      let d =
+        euclidean_distance(a_value, b_value)
+        |> float.max(0.0)
+
+      edge.new(a, b)
+      |> edge.with_weight(d)
+      |> option.Some
+    }
+    |> option.unwrap(edge.new(a, b) |> edge.with_weight(1.0))
+    |> graph.insert_edge(graph, _)
+  }
+
+  let graph =
+    [
+      node.new("a") |> node.with_value(#(0.0, 0.0)),
+      node.new("b") |> node.with_value(#(0.0, 2.0)),
+      node.new("c") |> node.with_value(#(2.0, 2.0)),
+      node.new("d") |> node.with_value(#(2.0, 0.0)),
+      node.new("e") |> node.with_value(#(1.0, 1.0)),
+      node.new("f") |> node.with_value(#(-2.0, 2.0)),
+      node.new("g") |> node.with_value(#(-2.0, 0.0)),
+      node.new("h") |> node.with_value(#(-1.0, 1.0)),
+      node.new("i") |> node.with_value(#(-1.0, -1.0)),
+      node.new("j") |> node.with_value(#(1.0, -1.0)),
+      node.new("k") |> node.with_value(#(-2.0, -2.0)),
+      node.new("l") |> node.with_value(#(0.0, -2.0)),
+      node.new("m") |> node.with_value(#(2.0, -2.0)),
+    ]
+    |> list.fold(graph.new(), graph.insert_node)
+    |> insert_edge_with_euclidean_distance("a", "b")
+    |> insert_edge_with_euclidean_distance("a", "d")
+    |> insert_edge_with_euclidean_distance("a", "e")
+    |> insert_edge_with_euclidean_distance("a", "g")
+    |> insert_edge_with_euclidean_distance("a", "h")
+    |> insert_edge_with_euclidean_distance("a", "i")
+    |> insert_edge_with_euclidean_distance("a", "j")
+    |> insert_edge_with_euclidean_distance("b", "c")
+    |> insert_edge_with_euclidean_distance("d", "c")
+    |> insert_edge_with_euclidean_distance("e", "c")
+    |> insert_edge_with_euclidean_distance("f", "b")
+    |> insert_edge_with_euclidean_distance("g", "f")
+    |> insert_edge_with_euclidean_distance("h", "f")
+    |> insert_edge_with_euclidean_distance("i", "k")
+    |> insert_edge_with_euclidean_distance("j", "m")
+    |> insert_edge_with_euclidean_distance("k", "g")
+    |> insert_edge_with_euclidean_distance("k", "l")
+    |> insert_edge_with_euclidean_distance("l", "m")
+    |> insert_edge_with_euclidean_distance("m", "d")
+
+  // This builds a graph with node values representing 2D coordinates in a square:
+  // f --- b --- c
+  // | \   |   / |
+  // |  h  |  e  |
+  // |   \ | /   |
+  // g --- a --- d
+  // |   / | \   |
+  // |  i  |  j  |
+  // | /   |   \ |
+  // k --- l --- m
+
+  let counter = start_counter()
+
+  // Without the zero heuristic (equivalent to Dijkstra), all nodes are visited
+  let zero_heuristic = fn(a, _) {
+    counter |> actor.send(Incr(a))
+    0.0
+  }
+
+  let _path =
+    graph
+    |> astar.find_path("a", "c", zero_heuristic)
+
+  let visited_nodes =
+    counter
+    |> actor.call(Stop, 10)
+
+  visited_nodes
+  |> dict.values()
+  |> list.fold(0, fn(acc, v) { acc + v })
+  |> should.equal(13)
+
+  visited_nodes
+  |> dict.keys()
+  |> set.from_list()
+  |> should.equal(set.from_list(
+    graph
+    |> graph.get_nodes()
+    |> list.map(fn(node) { node.value })
+    |> option.values(),
+  ))
+
+  let counter = start_counter()
+
+  // With the Euclidean heuristic, the number of nodes visited
+  // is reduced significantly, as the algorithm can skip over nodes
+  // for which the heuristic estimates a longer path.
+  let heuristic = fn(a, b) {
+    counter |> actor.send(Incr(a))
+    euclidean_distance(a, b)
+  }
+
+  let _path =
+    graph
+    |> astar.find_path("a", "c", heuristic)
+
+  let visited_nodes =
+    counter
+    |> actor.call(Stop, 10)
+
+  visited_nodes
+  |> dict.values()
+  |> list.fold(0, fn(acc, v) { acc + v })
+  |> should.equal(9)
+
+  visited_nodes
+  |> dict.keys()
+  |> set.from_list()
+  |> should.equal(
+    set.from_list([
+      #(-2.0, 0.0),
+      #(-1.0, -1.0),
+      #(-1.0, 1.0),
+      #(0.0, 0.0),
+      #(0.0, 2.0),
+      #(1.0, -1.0),
+      #(1.0, 1.0),
+      #(2.0, 0.0),
+      #(2.0, 2.0),
+    ]),
+  )
 }
