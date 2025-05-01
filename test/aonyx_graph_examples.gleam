@@ -145,9 +145,9 @@ fn path_finding_with_a_star() {
     ]
     |> list.fold(graph.new(), graph.insert_node)
     // add edges with approximate weights (rounded up from the euclidean distance)
-    |> graph.insert_edge(edge.new("A", "B") |> edge.with_weight(1.1))
+    |> graph.insert_edge(edge.new("A", "B") |> edge.with_weight(1.0))
     |> graph.insert_edge(edge.new("A", "C") |> edge.with_weight(0.8))
-    |> graph.insert_edge(edge.new("B", "D") |> edge.with_weight(1.2))
+    |> graph.insert_edge(edge.new("B", "D") |> edge.with_weight(1.0))
     |> graph.insert_edge(edge.new("C", "D") |> edge.with_weight(0.8))
 
   // this builds a graph with node values representing 2D coordinates:
