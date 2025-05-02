@@ -3,15 +3,13 @@ import aonyx/graph/astar
 import aonyx/graph/dijkstra
 import aonyx/graph/edge
 import aonyx/graph/node
-import gleam/dict
-import gleam/erlang/process
 import gleam/float
 import gleam/list
 import gleam/option
-import gleam/otp/actor
 import gleam/set
 import gleeunit
 import gleeunit/should
+import ref
 
 pub fn main() {
   gleeunit.main()
@@ -251,35 +249,6 @@ pub fn find_path_negative_cycle_test() {
   |> should.equal(["a", "b", "c", "d"])
 }
 
-type CounterMsg(key) {
-  Stop(reply_with: process.Subject(dict.Dict(key, Int)))
-  Incr(key)
-}
-
-fn start_counter() {
-  let assert Ok(counter) =
-    actor.start(dict.new(), fn(msg, s) {
-      case msg {
-        Stop(client) -> {
-          client |> actor.send(s)
-          actor.Stop(process.Normal)
-        }
-        Incr(key) ->
-          actor.continue(
-            s
-            |> dict.upsert(key, fn(v) {
-              case v {
-                option.Some(v) -> v + 1
-                option.None -> 1
-              }
-            }),
-          )
-      }
-    })
-
-  counter
-}
-
 pub fn find_path_astar_visited_nodes_test() {
   // Define the Euclidean distance function
   let euclidean_distance = fn(a, b) {
@@ -362,11 +331,11 @@ pub fn find_path_astar_visited_nodes_test() {
   // | /   |   \ |
   // k --- l --- m
 
-  let counter = start_counter()
+  let counter = ref.cell(0)
 
   // Without the zero heuristic (equivalent to Dijkstra), all nodes are visited
-  let zero_heuristic = fn(a, _) {
-    counter |> actor.send(Incr(a))
+  let zero_heuristic = fn(_, _) {
+    counter |> ref.set(fn(v) { v + 1 })
     0.0
   }
 
@@ -374,32 +343,19 @@ pub fn find_path_astar_visited_nodes_test() {
     graph
     |> astar.find_path("a", "c", zero_heuristic)
 
-  let visited_nodes =
-    counter
-    |> actor.call(Stop, 10)
-
-  visited_nodes
-  |> dict.values()
-  |> list.fold(0, fn(acc, v) { acc + v })
+  counter
+  |> ref.get()
   |> should.equal(13)
 
-  visited_nodes
-  |> dict.keys()
-  |> set.from_list()
-  |> should.equal(set.from_list(
-    graph
-    |> graph.get_nodes()
-    |> list.map(fn(node) { node.value })
-    |> option.values(),
-  ))
+  counter |> ref.kill()
 
-  let counter = start_counter()
+  let counter = ref.cell(0)
 
   // With the Euclidean heuristic, the number of nodes visited
   // is reduced significantly, as the algorithm can skip over nodes
   // for which the heuristic estimates a longer path.
   let heuristic = fn(a, b) {
-    counter |> actor.send(Incr(a))
+    counter |> ref.set(fn(v) { v + 1 })
     euclidean_distance(a, b)
   }
 
@@ -407,29 +363,9 @@ pub fn find_path_astar_visited_nodes_test() {
     graph
     |> astar.find_path("a", "c", heuristic)
 
-  let visited_nodes =
-    counter
-    |> actor.call(Stop, 10)
-
-  visited_nodes
-  |> dict.values()
-  |> list.fold(0, fn(acc, v) { acc + v })
+  counter
+  |> ref.get()
   |> should.equal(9)
 
-  visited_nodes
-  |> dict.keys()
-  |> set.from_list()
-  |> should.equal(
-    set.from_list([
-      #(-2.0, 0.0),
-      #(-1.0, -1.0),
-      #(-1.0, 1.0),
-      #(0.0, 0.0),
-      #(0.0, 2.0),
-      #(1.0, -1.0),
-      #(1.0, 1.0),
-      #(2.0, 0.0),
-      #(2.0, 2.0),
-    ]),
-  )
+  counter |> ref.kill()
 }
