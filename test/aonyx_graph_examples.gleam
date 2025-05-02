@@ -5,7 +5,6 @@ import aonyx/graph/edge
 import aonyx/graph/node
 import gleam/float
 import gleam/list
-import gleam/result
 import gleam/set
 import gleeunit/should
 
