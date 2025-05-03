@@ -5,6 +5,15 @@ All notable changes to the aonyx_graph project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+- Ensure heuristic value is non-negative in A* pathfinding
+
+### Documentation
+- Added examples to graph, edge, node, and pathfinding functions
+- Improved documentation for pathfinding functions
+
 ## [1.1.0] - 2025-05-01
 
 ### Added
