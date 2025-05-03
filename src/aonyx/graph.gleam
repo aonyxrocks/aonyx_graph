@@ -21,11 +21,29 @@ pub type GraphError(key) {
 }
 
 /// Creates a new empty graph.
+/// 
+/// ## Examples
+/// 
+/// ```gleam
+/// new()
+/// // -> Graph with 0 nodes and 0 edges
+/// ```
 pub fn new() -> Graph(key, value, label) {
   Graph(dict.new(), dict.new())
 }
 
 /// Returns a list of all edges in the graph.
+/// 
+/// ## Examples
+/// 
+/// ```gleam
+/// let graph = new()
+/// |> insert_edge(edge.new("A", "B"))
+/// |> insert_edge(edge.new("B", "C"))
+/// 
+/// get_edges(graph)
+/// // -> [Edge(from: "A", to: "B", ...), Edge(from: "B", to: "C", ...)]
+/// ```
 pub fn get_edges(graph: Graph(key, value, label)) -> List(Edge(key, label)) {
   graph.edges
   |> dict.values()
@@ -74,6 +92,26 @@ fn insert_edge_internal(
 /// Inserts an edge into the graph.
 /// If a node does not exist in the graph, it is created.
 /// If the edge already exists, it is replaced.
+/// 
+/// ## Examples
+/// 
+/// ```gleam
+/// let graph = new()
+/// let edge = edge.new("A", "B") |> edge.with_weight(5.0)
+/// insert_edge(graph, edge)
+/// // -> Graph with 2 nodes (A and B) and an edge from A to B with weight 5.0
+/// ```
+/// 
+/// ```gleam
+/// let graph = new()
+/// let edge1 = edge.new("A", "B") |> edge.with_label("connects to")
+/// let graph = insert_edge(graph, edge1)
+/// 
+/// // Replace with a new edge
+/// let edge2 = edge.new("A", "B") |> edge.with_weight(10.0)
+/// insert_edge(graph, edge2)
+/// // -> Edge from A to B now has weight 10.0 and no label
+/// ```
 pub fn insert_edge(
   graph: Graph(key, value, label),
   edge: Edge(key, label),
@@ -114,8 +152,15 @@ fn remove_edge_internal(
 }
 
 /// Removes an edge from the graph.
-/// If one of the nodes does not exist in the graph, NodeNotFoundError is returned.
 /// If the edge does not exist, the graph remains unchanged.
+/// 
+/// ## Examples
+/// 
+/// ```gleam
+/// let graph = new() |> insert_edge(edge.new("A", "B"))
+/// let updated_graph = remove_edge(graph, edge.new("A", "B"))
+/// // -> Graph with nodes A and B but no edges between them
+/// ```
 pub fn remove_edge(
   graph: Graph(key, value, label),
   edge: Edge(key, label),
@@ -124,6 +169,20 @@ pub fn remove_edge(
 }
 
 /// Returns the edge from the graph with the given from and to node keys, or an error when the edge does not exist.
+///
+/// ## Examples
+///
+/// ```gleam
+/// let graph = new() |> insert_edge(edge.new("A", "B") |> edge.with_weight(5.0))
+/// get_edge(graph, "A", "B")
+/// // -> Ok(Edge(from: "A", to: "B", weight: Some(5.0), label: None))
+/// ```
+///
+/// ```gleam
+/// let graph = new()
+/// get_edge(graph, "A", "B") 
+/// // -> Error(EdgeNotFoundError(from: "A", to: "B"))
+/// ```
 pub fn get_edge(
   graph: Graph(key, value, label),
   from: key,
@@ -135,6 +194,17 @@ pub fn get_edge(
 }
 
 /// Returns a list of all nodes in the graph.
+///
+/// ## Examples
+///
+/// ```gleam
+/// let graph = new()
+/// |> insert_edge(edge.new("A", "B"))
+/// |> insert_edge(edge.new("B", "C"))
+///
+/// get_nodes(graph)
+/// // -> [Node(key: "A", ...), Node(key: "B", ...), Node(key: "C", ...)]
+/// ```
 pub fn get_nodes(graph: Graph(key, value, label)) -> List(Node(key, value)) {
   graph.nodes
   |> dict.values()
@@ -203,6 +273,25 @@ fn insert_node_internal(
 /// Edges in the graph that are not present in the inserted node are removed.
 /// Existing edges remain unchanged.
 /// If any of the target nodes do not exist, they are created.
+///
+/// ## Examples
+///
+/// ```gleam
+/// let graph = new()
+/// let node = node.new("A") |> node.with_value("Node A")
+/// insert_node(graph, node)
+/// // -> Graph with node A having value "Node A"
+/// ```
+///
+/// ```gleam
+/// // Adding a node with connections
+/// let graph = new()
+/// let node = node.new("A") 
+///   |> node.with_outgoing(["B", "C"])
+///   |> node.with_value("Node A")
+/// insert_node(graph, node)
+/// // -> Graph with node A and edges to B and C
+/// ```
 pub fn insert_node(
   graph: Graph(key, value, label),
   node: Node(key, value),
@@ -231,6 +320,18 @@ fn remove_node_internal(
 
 /// Removes a node and all its edges from the graph.
 /// If the node does not exist, the graph remains unchanged.
+///
+/// ## Examples
+///
+/// ```gleam
+/// let graph = new()
+///   |> insert_edge(edge.new("A", "B"))
+///   |> insert_edge(edge.new("B", "C"))
+///
+/// let node_b = node.new("B")
+/// remove_node(graph, node_b)
+/// // -> Graph with nodes A and C, but no edges between them
+/// ```
 pub fn remove_node(
   graph: Graph(key, value, label),
   node: Node(key, value),
@@ -239,6 +340,22 @@ pub fn remove_node(
 }
 
 /// Returns the node from the graph with the given key, or an error when the node does not exist.
+///
+/// ## Examples
+///
+/// ```gleam
+/// let graph = new()
+///   |> insert_edge(edge.new("A", "B"))
+///
+/// get_node(graph, "A")
+/// // -> Ok(Node(key: "A", outgoing: Set(["B"]), incoming: Set([]), value: None))
+/// ```
+///
+/// ```gleam
+/// let graph = new()
+/// get_node(graph, "X") 
+/// // -> Error(NodeNotFoundError(key: "X"))
+/// ```
 pub fn get_node(
   graph: Graph(key, value, label),
   key: key,
