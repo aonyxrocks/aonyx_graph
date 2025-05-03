@@ -27,7 +27,8 @@ type PathSearch(key) {
   )
 }
 
-/// Updates the node in the path search with a new distance and previous node if it is shorter than the current one.
+/// Updates a node if a shorter path is found.
+/// Returns the path search with the updated node or unchanged if current path is shorter.
 fn update_node(
   path_search: PathSearch(key),
   key: key,
@@ -59,8 +60,8 @@ fn update_node(
   }
 }
 
-/// Updates the neighbors of the current node by checking if a shorter path can be found through the current node.
-/// If a shorter path is found, it updates the neighbor's distance and previous node.
+/// Updates neighbors of current node by checking for shorter paths.
+/// For each neighbor, calculates and updates distances if a shorter path is found.
 fn update_neighbors(
   path_search: PathSearch(key),
   current: key,
@@ -74,9 +75,8 @@ fn update_neighbors(
   })
 }
 
-/// Backtracks from the current (goal) node to the start node to reconstruct the shortest path, by following the previous nodes.
-/// The accumulator should be an empty list when called.
-/// Stops when it reaches a node with no previous node (which is the start node).
+/// Reconstructs the path from goal to start by following previous nodes.
+/// Returns the path as a list ordered from start to goal.
 fn reconstruct_path(
   nodes: dict.Dict(key, Node(key)),
   acc: List(key),
@@ -92,7 +92,7 @@ fn reconstruct_path(
   }
 }
 
-/// Selects the node from the open_set with the shortest distance so far.
+/// Selects the next node to process based on lowest f-score (distance + heuristic).
 fn get_current(
   open_set: set.Set(key),
   nodes: dict.Dict(key, Node(key)),
@@ -109,12 +109,9 @@ fn get_current(
   })
 }
 
-/// Recursively searches for the shortest path from start to goal.
-/// It uses the open_set to keep track of the nodes to explore.
-/// It updates the neighbors of the current node and continues searching until it finds the goal or exhausts all options.
-/// If the goal is found, it reconstructs the path and returns it.
-/// If no path is found, it returns None.
-/// The function is tail-recursive, so it can handle large graphs without running out of stack space.
+/// Core A* search algorithm implementation.
+/// Recursively processes nodes until goal is found or all paths are exhausted.
+/// Uses tail recursion for efficient processing of large graphs.
 fn find_path_internal(
   path_search: PathSearch(key),
   goal: key,
@@ -133,13 +130,15 @@ fn find_path_internal(
   }
 }
 
-/// Uses the A* algorithm to search for the shortest path from start to goal in the graph.
-/// The heuristic function is used to estimate the remaining distance from a node to the goal and must be admissive (e.g. never overestimate the distance).
-/// A heuristic function that always returns 0.0 will make this function equivalent to Dijkstra's algorithm.
-/// If a node does not have a value to be used as a heuristic, the heuristic function is skipped and 0.0 is used.
-/// The returned list represents the path in order from the start node to the goal node, or None when no path can be found.
+/// Finds the shortest path from start to goal using A* algorithm.
 /// 
-/// Notes: Since the A* algorithm is susceptible to negative cycles, negative weights are clamped to 0.0 to avoid infinite loops. None values are treated as 1.0.
+/// The heuristic function estimates remaining distance to goal and must be admissible
+/// (never overestimate). Using a zero heuristic makes this equivalent to Dijkstra's algorithm.
+/// 
+/// Returns a list of nodes from start to goal, or None if no path exists.
+/// 
+/// Note: Does not support negative edge weights (they are clamped to 0.0).
+/// Edge weights of None are treated as 1.0.
 pub fn find_path(
   graph: graph.Graph(key, value, label),
   start: key,
