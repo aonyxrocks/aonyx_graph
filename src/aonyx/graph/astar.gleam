@@ -221,6 +221,7 @@ pub fn find_path(
       use n <- option.then(graph |> graph.get_node(key) |> option.from_result)
       use n_value <- option.then(n.value)
       heuristic(n_value, g_value)
+      |> float.max(0.0)
       |> option.Some
     }
     |> option.unwrap(0.0)
