@@ -43,7 +43,6 @@ import gleam/option
 /// find_path(graph, "A", "D")
 /// // -> None
 /// ```
-@deprecated("Use aonyx/graph/path/dijkstra.find_path instead")
 pub fn find_path(
   graph: graph.Graph(key, value, label),
   start: key,

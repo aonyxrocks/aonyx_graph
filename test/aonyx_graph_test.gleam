@@ -1,8 +1,8 @@
 import aonyx/graph
-import aonyx/graph/astar
-import aonyx/graph/dijkstra
 import aonyx/graph/edge
 import aonyx/graph/node
+import aonyx/graph/path/astar
+import aonyx/graph/path/dijkstra
 import gleam/float
 import gleam/list
 import gleam/option
