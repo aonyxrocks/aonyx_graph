@@ -6,6 +6,7 @@ import aonyx/graph/path/dijkstra
 import gleam/float
 import gleam/list
 import gleam/option
+import gleam/result
 import gleam/set
 import gleeunit
 import gleeunit/should
@@ -368,4 +369,66 @@ pub fn find_path_astar_visited_nodes_test() {
   |> should.equal(9)
 
   counter |> ref.kill()
+}
+
+pub fn fold_breadth_first_test() {
+  let nodes =
+    ["a", "b", "c", "d", "e"]
+    |> list.map(node.new)
+
+  let edges = [
+    edge.new("a", "b"),
+    edge.new("a", "c"),
+    edge.new("b", "d"),
+    edge.new("c", "e"),
+  ]
+
+  let graph =
+    graph.new()
+    |> list.fold(nodes, _, graph.insert_node)
+    |> list.fold(edges, _, graph.insert_edge)
+
+  let visit = fn(acc, n: node.Node(String, Nil), _) {
+    graph.Continue([n.key, ..acc])
+  }
+
+  let visited_nodes =
+    graph
+    |> graph.fold_breadth_first_until("a", [], visit)
+    |> result.map(list.reverse)
+
+  visited_nodes
+  |> should.be_ok()
+  |> should.equal(["a", "b", "c", "d", "e"])
+}
+
+pub fn fold_depth_first_test() {
+  let nodes =
+    ["a", "b", "c", "d", "e"]
+    |> list.map(node.new)
+
+  let edges = [
+    edge.new("a", "b"),
+    edge.new("b", "c"),
+    edge.new("b", "d"),
+    edge.new("d", "e"),
+  ]
+
+  let graph =
+    graph.new()
+    |> list.fold(nodes, _, graph.insert_node)
+    |> list.fold(edges, _, graph.insert_edge)
+
+  let visit = fn(acc, n: node.Node(String, Nil), _) {
+    graph.Continue([n.key, ..acc])
+  }
+
+  let visited_nodes =
+    graph
+    |> graph.fold_depth_first_until("a", [], visit)
+    |> result.map(list.reverse)
+
+  visited_nodes
+  |> should.be_ok()
+  |> should.equal(["a", "b", "c", "d", "e"])
 }

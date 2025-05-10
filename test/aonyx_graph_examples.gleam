@@ -3,8 +3,10 @@ import aonyx/graph/edge
 import aonyx/graph/node
 import aonyx/graph/path/astar
 import aonyx/graph/path/dijkstra
+import gleam/dict
 import gleam/float
 import gleam/list
+import gleam/option
 import gleam/set
 import gleeunit/should
 
@@ -13,6 +15,8 @@ pub fn main() {
   |> path_finding()
 
   path_finding_with_a_star()
+
+  graph_traversal_examples()
 }
 
 fn creating_and_modifying_a_graph() {
@@ -163,4 +167,90 @@ fn path_finding_with_a_star() {
   path
   |> should.be_some()
   |> should.equal(["A", "C", "D"])
+}
+
+fn graph_traversal_examples() {
+  // Create a simple tree-like graph for traversal examples
+  //      A
+  //     / \
+  //    B   C
+  //   / \   \
+  //  D   E   F
+  let g =
+    graph.new()
+    |> graph.insert_edge(edge.new("A", "B"))
+    |> graph.insert_edge(edge.new("A", "C"))
+    |> graph.insert_edge(edge.new("B", "D"))
+    |> graph.insert_edge(edge.new("B", "E"))
+    |> graph.insert_edge(edge.new("C", "F"))
+
+  // Example 1: Collect node keys for each depth level
+  let visit = fn(acc, node: node.Node(String, _), depth) {
+    graph.Continue(
+      acc
+      |> dict.upsert(depth, fn(x) {
+        case x {
+          option.None -> [node.key] |> set.from_list()
+          option.Some(xs) -> xs |> set.insert(node.key)
+        }
+      }),
+    )
+  }
+
+  let breadth_first_result =
+    g
+    |> graph.fold_breadth_first_until("A", dict.new(), visit)
+    |> should.be_ok()
+
+  // In breadth-first traversal, we visit nodes level by level
+  // A (level 0), then B, C (level 1), then D, E, F (level 2)
+  // The exact order within a level may vary depending on implementation
+  breadth_first_result
+  |> should.equal(
+    [
+      #(0, set.from_list(["A"])),
+      #(1, set.from_list(["B", "C"])),
+      #(2, set.from_list(["D", "E", "F"])),
+    ]
+    |> dict.from_list(),
+  )
+
+  // Example 2: Collect node keys in depth-first order
+  let depth_first_result =
+    g
+    |> graph.fold_depth_first_until("A", dict.new(), visit)
+    |> should.be_ok()
+
+  // In depth-first traversal, we explore as far as possible along each branch before backtracking
+  // The exact order depends on implementation but could be A -> B -> D -> E -> C -> F
+  // The depth levels will be the same as in breadth-first traversal
+  depth_first_result
+  |> should.equal(
+    [
+      #(0, set.from_list(["A"])),
+      #(1, set.from_list(["B", "C"])),
+      #(2, set.from_list(["D", "E", "F"])),
+    ]
+    |> dict.from_list(),
+  )
+
+  // Example 3: Early termination with Stop
+  // We'll stop when we find a node with key "C"
+  let stop_at_c = fn(acc, node: node.Node(String, _), _depth) {
+    case node.key {
+      "C" -> graph.Stop
+      _ -> graph.Continue([node.key, ..acc])
+    }
+  }
+
+  let partial_traversal =
+    g
+    |> graph.fold_breadth_first_until("A", [], stop_at_c)
+
+  // We should have only visited A and possibly B (depending on traversal order)
+  // but definitely not visited nodes after C
+  partial_traversal
+  |> should.be_ok()
+  |> list.contains("F")
+  |> should.be_false()
 }

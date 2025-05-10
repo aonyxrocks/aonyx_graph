@@ -364,3 +364,93 @@ pub fn get_node(
   |> dict.get(NodeKey(key))
   |> result.replace_error(NodeNotFoundError(key))
 }
+
+pub type ContinueOrStop(acc) {
+  Continue(acc)
+  Stop
+}
+
+type BreadthOrDepth {
+  Breadth
+  Depth
+}
+
+fn traverse_internal(
+  graph: Graph(key, value, label),
+  acc: acc,
+  visit: fn(acc, node.Node(key, value), Int) -> ContinueOrStop(acc),
+  open_set: List(#(key, Int)),
+  visited: set.Set(key),
+  dfs_or_bfs: BreadthOrDepth,
+) -> Result(acc, GraphError(key)) {
+  case open_set {
+    [] -> Ok(acc)
+    [#(current, current_depth), ..rest] -> {
+      use node <- result.try(
+        graph
+        |> get_node(current),
+      )
+
+      case visit(acc, node, current_depth) {
+        Continue(acc) -> {
+          let acc = acc
+          let visited = visited |> set.insert(current)
+          let next_nodes =
+            node
+            |> node.get_neighbors_out()
+            |> set.difference(visited)
+            |> set.to_list()
+            |> list.map(fn(key) { #(key, current_depth + 1) })
+          let open_set = case dfs_or_bfs {
+            Breadth -> rest |> list.append(next_nodes)
+            Depth -> next_nodes |> list.append(rest)
+          }
+          traverse_internal(graph, acc, visit, open_set, visited, dfs_or_bfs)
+        }
+        Stop -> Ok(acc)
+      }
+    }
+  }
+}
+
+/// Reduces the graph using a breadth-first traversal by calling
+/// the given function on each node, starting from the given node.
+/// 
+/// The folding function should return `ContinueOrStop(accumulator)`.
+/// 
+/// If the returned value is `Continue(accumulator)` `fold_breadth_first_until`
+/// will try to move on to the next node or return that accumulator.
+/// 
+/// If the returned value is `Stop(accumulator)` `fold_breadth_first_until`
+/// will stop and return that accumulator.
+/// 
+/// Returns the final accumulator value, or an error if the start node is not found in the graph.
+pub fn fold_breadth_first_until(
+  over graph: Graph(key, value, label),
+  using start: key,
+  from initial: acc,
+  with fun: fn(acc, node.Node(key, value), Int) -> ContinueOrStop(acc),
+) -> Result(acc, GraphError(key)) {
+  graph |> traverse_internal(initial, fun, [#(start, 0)], set.new(), Breadth)
+}
+
+/// Reduces the graph using a depth-first traversal by calling
+/// the given function on each node, starting from the given node.
+/// 
+/// The folding function should return `ContinueOrStop(accumulator)`.
+/// 
+/// If the returned value is `Continue(accumulator)` `fold_depth_first_until`
+/// will try to move on to the next node or return that accumulator.
+/// 
+/// If the returned value is `Stop(accumulator)` `fold_depth_first_until`
+/// will stop and return that accumulator.
+/// 
+/// Returns the final accumulator value, or an error if the start node is not found in the graph.
+pub fn fold_depth_first_until(
+  over graph: Graph(key, value, label),
+  using start: key,
+  from initial: acc,
+  with fun: fn(acc, node.Node(key, value), Int) -> ContinueOrStop(acc),
+) -> Result(acc, GraphError(key)) {
+  graph |> traverse_internal(initial, fun, [#(start, 0)], set.new(), Depth)
+}
