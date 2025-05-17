@@ -17,7 +17,8 @@ jobs:
           rebar3-version: "3"
           gleam-version: "1.10.0"
 
-      - run: |
+      - working-directory: ${{ github.workspace }}/aonyx_graph
+        run: |
           version="v$(cat gleam.toml | grep -m 1 "version" | sed -r "s/version *= *\"([[:digit:].]+)\"/\1/")"
           if [ "$version" != "${{ github.ref_name }}" ]; then
             echo "tag '${{ github.ref_name }}' does not match the version in gleam.toml"
@@ -27,13 +28,17 @@ jobs:
 
         name: check version
 
-      - run: gleam format --check
+      - working-directory: ${{ github.workspace }}/aonyx_graph
+        run: gleam format --check
 
-      - run: gleam test --target erlang
+      - working-directory: ${{ github.workspace }}/aonyx_graph
+        run: gleam test --target erlang
 
-      - run: gleam test --target javascript
+      - working-directory: ${{ github.workspace }}/aonyx_graph
+        run: gleam test --target javascript
 
-      - run: gleam publish -y --replace
+      - working-directory: ${{ github.workspace }}/aonyx_graph
+        run: gleam publish -y --replace
         env:
           HEXPM_API_KEY: ${{ secrets.HEXPM_API_KEY }}
 
