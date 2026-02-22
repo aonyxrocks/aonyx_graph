@@ -1,6 +1,6 @@
 name = "aonyx_graph"
-version = "1.1.0"
-gleam = ">= 1.10.0"
+version = "1.2.0"
+gleam = ">= 1.14.0"
 
 description = "A graph library. Including path finding."
 licences = ["MIT"]
@@ -8,8 +8,7 @@ repository = { type = "github", user = "aonyxrocks", repo = "aonyx_graph" }
 
 
 [dependencies]
-gleam_stdlib = ">= 0.59.0 and < 2.0.0"
+gleam_stdlib = ">= 0.60.0 and < 2.0.0"
 
 [dev-dependencies]
 gleeunit = ">= 1.0.0 and < 2.0.0"
-ref = ">= 0.3.3 and < 1.0.0"
