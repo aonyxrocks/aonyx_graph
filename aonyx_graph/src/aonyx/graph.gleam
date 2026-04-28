@@ -52,30 +52,24 @@ pub fn get_edges(graph: Graph(key, value, label)) -> List(Edge(key, label)) {
 fn insert_edge_internal(
   graph: Graph(key, value, label),
   edge: Edge(key, label),
-) -> Graph(key, value, label) {
+) -> Result(Graph(key, value, label), Nil) {
   let Graph(nodes, edges) = graph
 
-  let from_node = case nodes |> dict.get(NodeKey(edge.from)) {
-    Ok(node) -> Node(..node, outgoing: node.outgoing |> set.insert(edge.to))
-    Error(_) ->
-      Node(
-        key: edge.from,
-        incoming: set.new(),
-        outgoing: [edge.to] |> set.from_list(),
-        value: option.None,
-      )
-  }
+  use from_node <- result.try(
+    nodes
+    |> dict.get(NodeKey(edge.from)),
+  )
 
-  let to_node = case nodes |> dict.get(NodeKey(edge.to)) {
-    Ok(node) -> Node(..node, incoming: node.incoming |> set.insert(edge.from))
-    Error(_) ->
-      Node(
-        key: edge.to,
-        incoming: [edge.from] |> set.from_list(),
-        outgoing: set.new(),
-        value: option.None,
-      )
-  }
+  let from_node =
+    Node(..from_node, outgoing: from_node.outgoing |> set.insert(edge.to))
+
+  use to_node <- result.try(
+    nodes
+    |> dict.get(NodeKey(edge.to)),
+  )
+
+  let to_node =
+    Node(..to_node, incoming: to_node.incoming |> set.insert(edge.from))
 
   let nodes =
     nodes
@@ -86,11 +80,11 @@ fn insert_edge_internal(
     edges
     |> dict.insert(edge.get_key(edge), edge)
 
-  Graph(nodes, edges)
+  Ok(Graph(nodes:, edges:))
 }
 
 /// Inserts an edge into the graph.
-/// If a node does not exist in the graph, it is created.
+/// If a node does not exist in the graph, an error is returned.
 /// If the edge already exists, it is replaced.
 /// 
 /// ## Examples
@@ -99,7 +93,7 @@ fn insert_edge_internal(
 /// let graph = new()
 /// let edge = edge.new("A", "B") |> edge.with_weight(5.0)
 /// insert_edge(graph, edge)
-/// // -> Graph with 2 nodes (A and B) and an edge from A to B with weight 5.0
+/// // -> Error(Nil)
 /// ```
 /// 
 /// ```gleam
@@ -112,11 +106,68 @@ fn insert_edge_internal(
 /// insert_edge(graph, edge2)
 /// // -> Edge from A to B now has weight 10.0 and no label
 /// ```
+pub fn try_insert_edge(
+  graph: Graph(key, value, label),
+  edge: Edge(key, label),
+) -> Result(Graph(key, value, label), Nil) {
+  insert_edge_internal(graph, edge)
+}
+
+/// Inserts an edge into the graph.
+/// If any of the two nodes do not exist in the graph, they are created using the default value.
+/// If the edge already exists, it is replaced.
+/// 
+/// ## Examples
+/// 
+/// ```gleam
+/// let graph = new()
+/// let edge = edge.new("A", "B") |> edge.with_weight(5.0)
+/// insert_edge_with_default(graph, edge, "Default Value")
+/// // -> Graph with 2 nodes (A and B) and an edge from A to B with weight 5.0
+/// ```
+/// 
+/// ```gleam
+/// let graph = new()
+/// let edge1 = edge.new("A", "B") |> edge.with_label("connects to")
+/// let graph = insert_edge_with_default(graph, edge1, "Default Value")
+/// 
+/// // Replace with a new edge
+/// let edge2 = edge.new("A", "B") |> edge.with_weight(10.0)
+/// insert_edge_with_default(graph, edge2, "Default Value")
+/// // -> Edge from A to B now has weight 10.0 and no label
+/// ```
 pub fn insert_edge(
   graph: Graph(key, value, label),
   edge: Edge(key, label),
+  default_node_value: value,
 ) -> Graph(key, value, label) {
-  insert_edge_internal(graph, edge)
+  let Graph(nodes, _) = graph
+
+  let from_node =
+    nodes
+    |> dict.get(NodeKey(edge.from))
+    |> result.unwrap(Node(
+      key: edge.from,
+      value: default_node_value,
+      outgoing: set.new(),
+      incoming: set.new(),
+    ))
+
+  let to_node =
+    nodes
+    |> dict.get(NodeKey(edge.to))
+    |> result.unwrap(Node(
+      key: edge.to,
+      value: default_node_value,
+      outgoing: set.new(),
+      incoming: set.new(),
+    ))
+
+  graph
+  |> insert_node_internal(from_node)
+  |> insert_node_internal(to_node)
+  |> insert_edge_internal(edge)
+  |> result.unwrap(graph)
 }
 
 fn remove_edge_internal(
@@ -148,7 +199,7 @@ fn remove_edge_internal(
     edges
     |> dict.delete(edge)
 
-  Graph(nodes, edges)
+  Graph(nodes:, edges:)
 }
 
 /// Removes an edge from the graph.
@@ -261,7 +312,9 @@ fn insert_node_internal(
   let graph =
     new_outgoing
     |> set.union(new_incoming)
-    |> set.fold(graph, insert_edge_internal)
+    |> set.fold(graph, fn(g, e) {
+      insert_edge_internal(g, e) |> result.unwrap(g)
+    })
 
   graph
 }
@@ -334,9 +387,12 @@ fn remove_node_internal(
 /// ```
 pub fn remove_node(
   graph: Graph(key, value, label),
-  node: Node(key, value),
+  key: NodeKey(key),
 ) -> Graph(key, value, label) {
-  remove_node_internal(graph, node)
+  case graph.nodes |> dict.get(key) {
+    Ok(node) -> remove_node_internal(graph, node)
+    Error(_) -> graph
+  }
 }
 
 /// Returns the node from the graph with the given key, or an error when the node does not exist.

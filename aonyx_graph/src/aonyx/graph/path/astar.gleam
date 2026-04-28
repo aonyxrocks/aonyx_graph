@@ -217,9 +217,9 @@ pub fn find_path(
   )
   let get_heuristic = fn(key: key) {
     {
-      use g_value <- option.then(goal_node.value)
+      let g_value = goal_node.value
       use n <- option.then(graph |> graph.get_node(key) |> option.from_result)
-      use n_value <- option.then(n.value)
+      let n_value = n.value
       heuristic(n_value, g_value)
       |> float.max(0.0)
       |> option.Some

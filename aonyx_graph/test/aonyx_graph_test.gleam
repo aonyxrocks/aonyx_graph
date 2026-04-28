@@ -18,7 +18,7 @@ pub fn main() {
 fn graph_fixture() {
   let graph =
     ["a", "b", "c"]
-    |> list.map(node.new)
+    |> list.map(node.new(_, Nil))
     |> list.fold(graph.new(), graph.insert_node)
 
   graph
@@ -27,13 +27,15 @@ fn graph_fixture() {
 pub fn new_graph_test() {
   graph_fixture()
   |> graph.get_nodes()
-  |> should.equal([node.new("a"), node.new("b"), node.new("c")])
+  |> list.map(fn(node) { node.key })
+  |> set.from_list()
+  |> should.equal(set.from_list(["a", "b", "c"]))
 }
 
 pub fn add_edge_ok_test() {
   let graph =
     graph_fixture()
-    |> graph.insert_edge(edge.new("a", "b"))
+    |> graph.insert_edge(edge.new("a", "b"), Nil)
 
   graph
   |> graph.get_edges()
@@ -61,7 +63,7 @@ pub fn add_edge_ok_test() {
 pub fn remove_edge_ok_test() {
   let graph =
     graph_fixture()
-    |> graph.insert_edge(edge.new("a", "b"))
+    |> graph.insert_edge(edge.new("a", "b"), Nil)
     |> graph.remove_edge(edge.new("a", "b"))
     |> graph.remove_edge(edge.new("a", "c"))
 
@@ -85,12 +87,16 @@ pub fn remove_edge_ok_test() {
 pub fn insert_edge_ok_test() {
   let graph =
     graph_fixture()
-    |> graph.insert_edge(edge.new("a", "b"))
-    |> graph.insert_edge(edge.new("b", "c"))
+    |> graph.insert_edge(edge.new("a", "b"), Nil)
+    |> graph.insert_edge(edge.new("b", "c"), Nil)
 
   graph
   |> graph.get_edges()
-  |> should.equal([edge.new("a", "b"), edge.new("b", "c")])
+  |> list.map(edge.get_key)
+  |> set.from_list()
+  |> should.equal(
+    set.from_list([edge.EdgeKey("a", "b"), edge.EdgeKey("b", "c")]),
+  )
 
   graph
   |> graph.get_node("a")
@@ -108,16 +114,17 @@ pub fn insert_edge_ok_test() {
 pub fn remove_node_test() {
   let graph =
     graph_fixture()
-    |> graph.insert_edge(edge.new("a", "b"))
-    |> graph.insert_edge(edge.new("b", "c"))
-    |> graph.insert_edge(edge.new("c", "a"))
-    |> graph.remove_node(node.new("b"))
-    |> graph.remove_node(node.new("d"))
+    |> graph.insert_edge(edge.new("a", "b"), Nil)
+    |> graph.insert_edge(edge.new("b", "c"), Nil)
+    |> graph.insert_edge(edge.new("c", "a"), Nil)
+    |> graph.remove_node(node.NodeKey("b"))
+    |> graph.remove_node(node.NodeKey("d"))
 
   graph
   |> graph.get_nodes()
   |> list.map(fn(node) { node.key })
-  |> should.equal(["a", "c"])
+  |> set.from_list()
+  |> should.equal(set.from_list(["a", "c"]))
 
   graph
   |> graph.get_edges()
@@ -139,10 +146,10 @@ pub fn remove_node_test() {
 pub fn re_insert_node_without_edges_test() {
   let graph =
     graph_fixture()
-    |> graph.insert_edge(edge.new("a", "b"))
-    |> graph.insert_edge(edge.new("a", "c"))
-    |> graph.insert_edge(edge.new("b", "c"))
-    |> graph.insert_node(node.new("a"))
+    |> graph.insert_edge(edge.new("a", "b"), Nil)
+    |> graph.insert_edge(edge.new("a", "c"), Nil)
+    |> graph.insert_edge(edge.new("b", "c"), Nil)
+    |> graph.insert_node(node.new("a", Nil))
 
   graph
   |> graph.get_node("a")
@@ -166,7 +173,10 @@ pub fn re_insert_node_without_edges_test() {
 pub fn get_edge_test() {
   let graph =
     graph_fixture()
-    |> graph.insert_edge(edge.new("a", "b") |> edge.with_label("test label"))
+    |> graph.insert_edge(
+      edge.new("a", "b") |> edge.with_label("test label"),
+      Nil,
+    )
 
   // Test getting an existing edge
   graph
@@ -192,9 +202,11 @@ pub fn find_path_some_test() {
   let graph =
     graph.new()
     |> list.fold(["a", "b", "c"], _, fn(g, node_key) {
-      g |> graph.insert_node(node.new(node_key))
+      g |> graph.insert_node(node.new(node_key, Nil))
     })
-    |> list.fold([edge.new("a", "b"), edge.new("b", "c")], _, graph.insert_edge)
+    |> list.fold([edge.new("a", "b"), edge.new("b", "c")], _, fn(g, e) {
+      graph.insert_edge(g, e, Nil)
+    })
 
   graph
   |> dijkstra.find_path("a", "c")
@@ -206,9 +218,13 @@ pub fn find_path_none_test() {
   let graph =
     graph.new()
     |> list.fold(["a", "b", "c"], _, fn(g, node_key) {
-      g |> graph.insert_node(node.new(node_key))
+      g |> graph.insert_node(node.new(node_key, Nil))
     })
-    |> list.fold([edge.new("a", "b"), edge.new("b", "c")], _, graph.insert_edge)
+    |> Ok
+    |> list.fold([edge.new("a", "b"), edge.new("b", "c")], _, fn(g, e) {
+      result.try(g, graph.try_insert_edge(_, e))
+    })
+    |> should.be_ok()
 
   graph
   |> dijkstra.find_path("c", "a")
@@ -225,7 +241,7 @@ pub fn find_path_weighted_test() {
       edge.new("c", "e") |> edge.with_weight(3.0),
       edge.new("d", "e") |> edge.with_weight(5.0),
     ]
-    |> list.fold(graph.new(), graph.insert_edge)
+    |> list.fold(graph.new(), fn(g, e) { graph.insert_edge(g, e, Nil) })
 
   graph
   |> dijkstra.find_path("a", "e")
@@ -241,7 +257,7 @@ pub fn find_path_negative_cycle_test() {
       edge.new("c", "a") |> edge.with_weight(-1.0),
       edge.new("c", "d") |> edge.with_weight(1.0),
     ]
-    |> list.fold(graph.new(), graph.insert_edge)
+    |> list.fold(graph.new(), fn(g, e) { graph.insert_edge(g, e, Nil) })
 
   graph
   |> dijkstra.find_path("a", "d")
@@ -268,8 +284,8 @@ pub fn find_path_astar_visited_nodes_test() {
       use b_node <- option.then(
         graph |> graph.get_node(b) |> option.from_result,
       )
-      use a_value <- option.then(a_node.value)
-      use b_value <- option.then(b_node.value)
+      let a_value = a_node.value
+      let b_value = b_node.value
 
       let d =
         euclidean_distance(a_value, b_value)
@@ -280,24 +296,25 @@ pub fn find_path_astar_visited_nodes_test() {
       |> option.Some
     }
     |> option.unwrap(edge.new(a, b) |> edge.with_weight(1.0))
-    |> graph.insert_edge(graph, _)
+    |> graph.try_insert_edge(graph, _)
+    |> result.unwrap(graph)
   }
 
   let graph =
     [
-      node.new("a") |> node.with_value(#(0.0, 0.0)),
-      node.new("b") |> node.with_value(#(0.0, 2.0)),
-      node.new("c") |> node.with_value(#(2.0, 2.0)),
-      node.new("d") |> node.with_value(#(2.0, 0.0)),
-      node.new("e") |> node.with_value(#(1.0, 1.0)),
-      node.new("f") |> node.with_value(#(-2.0, 2.0)),
-      node.new("g") |> node.with_value(#(-2.0, 0.0)),
-      node.new("h") |> node.with_value(#(-1.0, 1.0)),
-      node.new("i") |> node.with_value(#(-1.0, -1.0)),
-      node.new("j") |> node.with_value(#(1.0, -1.0)),
-      node.new("k") |> node.with_value(#(-2.0, -2.0)),
-      node.new("l") |> node.with_value(#(0.0, -2.0)),
-      node.new("m") |> node.with_value(#(2.0, -2.0)),
+      node.new("a", #(0.0, 0.0)),
+      node.new("b", #(0.0, 2.0)),
+      node.new("c", #(2.0, 2.0)),
+      node.new("d", #(2.0, 0.0)),
+      node.new("e", #(1.0, 1.0)),
+      node.new("f", #(-2.0, 2.0)),
+      node.new("g", #(-2.0, 0.0)),
+      node.new("h", #(-1.0, 1.0)),
+      node.new("i", #(-1.0, -1.0)),
+      node.new("j", #(1.0, -1.0)),
+      node.new("k", #(-2.0, -2.0)),
+      node.new("l", #(0.0, -2.0)),
+      node.new("m", #(2.0, -2.0)),
     ]
     |> list.fold(graph.new(), graph.insert_node)
     |> insert_edge_with_euclidean_distance("a", "b")
@@ -373,7 +390,7 @@ pub fn find_path_astar_visited_nodes_test() {
 pub fn fold_breadth_first_test() {
   let nodes =
     ["a", "b", "c", "d", "e"]
-    |> list.map(node.new)
+    |> list.map(node.new(_, Nil))
 
   let edges = [
     edge.new("a", "b"),
@@ -385,7 +402,7 @@ pub fn fold_breadth_first_test() {
   let graph =
     graph.new()
     |> list.fold(nodes, _, graph.insert_node)
-    |> list.fold(edges, _, graph.insert_edge)
+    |> list.fold(edges, _, fn(g, e) { graph.insert_edge(g, e, Nil) })
 
   let visit = fn(acc, n: node.Node(String, Nil), _) {
     graph.Continue([n.key, ..acc])
@@ -394,17 +411,17 @@ pub fn fold_breadth_first_test() {
   let visited_nodes =
     graph
     |> graph.fold_breadth_first_until("a", [], visit)
-    |> result.map(list.reverse)
+    |> result.map(set.from_list)
 
   visited_nodes
   |> should.be_ok()
-  |> should.equal(["a", "b", "c", "d", "e"])
+  |> should.equal(set.from_list(["a", "b", "c", "d", "e"]))
 }
 
 pub fn fold_depth_first_test() {
   let nodes =
     ["a", "b", "c", "d", "e"]
-    |> list.map(node.new)
+    |> list.map(node.new(_, Nil))
 
   let edges = [
     edge.new("a", "b"),
@@ -416,7 +433,7 @@ pub fn fold_depth_first_test() {
   let graph =
     graph.new()
     |> list.fold(nodes, _, graph.insert_node)
-    |> list.fold(edges, _, graph.insert_edge)
+    |> list.fold(edges, _, fn(g, e) { graph.insert_edge(g, e, Nil) })
 
   let visit = fn(acc, n: node.Node(String, Nil), _) {
     graph.Continue([n.key, ..acc])
@@ -425,9 +442,9 @@ pub fn fold_depth_first_test() {
   let visited_nodes =
     graph
     |> graph.fold_depth_first_until("a", [], visit)
-    |> result.map(list.reverse)
+    |> result.map(set.from_list)
 
   visited_nodes
   |> should.be_ok()
-  |> should.equal(["a", "b", "c", "d", "e"])
+  |> should.equal(set.from_list(["a", "b", "c", "d", "e"]))
 }

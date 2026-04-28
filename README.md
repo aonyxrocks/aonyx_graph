@@ -27,6 +27,7 @@ import gleam/dict
 import gleam/float
 import gleam/list
 import gleam/option
+import gleam/result
 import gleam/set
 import gleeunit/should
 
@@ -44,13 +45,13 @@ fn creating_and_modifying_a_graph() {
 
   let g =
     [
-      node.new("A"),
-      node.new("B"),
-      node.new("C"),
-      node.new("D") |> node.with_value("Some value"),
+      node.new("A", option.None),
+      node.new("B", option.None),
+      node.new("C", option.None),
+      node.new("D", option.Some("Some value")),
       // you can also add nodes with incoming or outgoing edges.
       // the edges will be created automatically as well as the target nodes.
-      node.new("E")
+      node.new("E", option.None)
         |> node.with_incoming(["B"])
         |> node.with_outgoing(["F"]),
     ]
@@ -69,7 +70,8 @@ fn creating_and_modifying_a_graph() {
       // the nodes will be created automatically.
       edge.new("G", "H"),
     ]
-    |> list.fold(g, graph.insert_edge)
+    |> list.fold(Ok(g), fn(g, e) { result.try(g, graph.try_insert_edge(_, e)) })
+    |> should.be_ok()
 
   g |> graph.get_edges() |> list.length() |> should.equal(8)
   g |> graph.get_nodes() |> list.length() |> should.equal(8)
@@ -122,7 +124,7 @@ fn path_finding(g: graph.Graph(String, _, _)) {
   |> should.be_some()
   |> should.equal(["A", "B", "E", "F"])
 
-  let g = g |> graph.remove_node(node.new("E"))
+  let g = g |> graph.remove_node(node.NodeKey("E"))
 
   g
   |> dijkstra.find_path("A", "F")
@@ -161,17 +163,26 @@ fn path_finding_with_a_star() {
 
   let g =
     [
-      node.new("A") |> node.with_value(#(0.0, 0.0)),
-      node.new("B") |> node.with_value(#(0.0, 1.0)),
-      node.new("C") |> node.with_value(#(0.5, 0.5)),
-      node.new("D") |> node.with_value(#(1.0, 1.0)),
+      node.new("A", #(0.0, 0.0)),
+      node.new("B", #(0.0, 1.0)),
+      node.new("C", #(0.5, 0.5)),
+      node.new("D", #(1.0, 1.0)),
     ]
     |> list.fold(graph.new(), graph.insert_node)
+    |> Ok
     // add edges with approximate weights (rounded up from the euclidean distance)
-    |> graph.insert_edge(edge.new("A", "B") |> edge.with_weight(1.0))
-    |> graph.insert_edge(edge.new("A", "C") |> edge.with_weight(0.8))
-    |> graph.insert_edge(edge.new("B", "D") |> edge.with_weight(1.0))
-    |> graph.insert_edge(edge.new("C", "D") |> edge.with_weight(0.8))
+    |> result.try(fn(g) {
+      g |> graph.try_insert_edge(edge.new("A", "B") |> edge.with_weight(1.0))
+    })
+    |> result.try(fn(g) {
+      g |> graph.try_insert_edge(edge.new("A", "C") |> edge.with_weight(0.8))
+    })
+    |> result.try(fn(g) {
+      g |> graph.try_insert_edge(edge.new("B", "D") |> edge.with_weight(1.0))
+    })
+    |> result.try(fn(g) {
+      g |> graph.try_insert_edge(edge.new("C", "D") |> edge.with_weight(0.8))
+    })
 
   // this builds a graph with node values representing 2D coordinates:
   // A
@@ -182,6 +193,7 @@ fn path_finding_with_a_star() {
 
   let path =
     g
+    |> should.be_ok()
     |> astar.find_path("A", "D", euclidean_distance)
 
   path
@@ -198,11 +210,11 @@ fn graph_traversal_examples() {
   //  D   E   F
   let g =
     graph.new()
-    |> graph.insert_edge(edge.new("A", "B"))
-    |> graph.insert_edge(edge.new("A", "C"))
-    |> graph.insert_edge(edge.new("B", "D"))
-    |> graph.insert_edge(edge.new("B", "E"))
-    |> graph.insert_edge(edge.new("C", "F"))
+    |> graph.insert_edge(edge.new("A", "B"), Nil)
+    |> graph.insert_edge(edge.new("A", "C"), Nil)
+    |> graph.insert_edge(edge.new("B", "D"), Nil)
+    |> graph.insert_edge(edge.new("B", "E"), Nil)
+    |> graph.insert_edge(edge.new("C", "F"), Nil)
 
   // Example 1: Collect node keys for each depth level
   let visit = fn(acc, node: node.Node(String, _), depth) {

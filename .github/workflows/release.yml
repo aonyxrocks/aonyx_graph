@@ -10,12 +10,12 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v3.1.0
-      - uses: erlef/setup-beam@v1.18.2
+      - uses: actions/checkout@v6
+      - uses: erlef/setup-beam@v1
         with:
           otp-version: "28.0"
           rebar3-version: "3"
-          gleam-version: "1.14.0"
+          gleam-version: "1.16.0"
 
       - working-directory: ${{ github.workspace }}/aonyx_graph
         run: |
@@ -29,7 +29,10 @@ jobs:
         name: check version
 
       - working-directory: ${{ github.workspace }}/aonyx_graph
-        run: gleam format --check
+        run: gleam deps download
+
+      - working-directory: ${{ github.workspace }}/aonyx_graph
+        run: gleam format --check src test
 
       - working-directory: ${{ github.workspace }}/aonyx_graph
         run: gleam test --target erlang

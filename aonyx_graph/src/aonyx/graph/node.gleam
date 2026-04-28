@@ -1,14 +1,8 @@
-import gleam/option
 import gleam/set
 
 /// Represents a node in the graph identified by a key and containing an optional value.
 pub type Node(key, value) {
-  Node(
-    key: key,
-    value: option.Option(value),
-    outgoing: set.Set(key),
-    incoming: set.Set(key),
-  )
+  Node(key: key, value: value, outgoing: set.Set(key), incoming: set.Set(key))
 }
 
 pub type NodeKey(key) {
@@ -20,11 +14,11 @@ pub type NodeKey(key) {
 /// ## Examples
 ///
 /// ```gleam
-/// new("A")
-/// // -> Node(key: "A", value: None, outgoing: Set([]), incoming: Set([]))
+/// new("A", "Node A")
+/// // -> Node(key: "A", value: "Node A", outgoing: Set([]), incoming: Set([]))
 /// ```
-pub fn new(key: key) -> Node(key, a) {
-  Node(key:, value: option.None, outgoing: set.new(), incoming: set.new())
+pub fn new(key: key, value: value) -> Node(key, value) {
+  Node(key:, value: value, outgoing: set.new(), incoming: set.new())
 }
 
 /// Extracts the key from a node.
@@ -89,21 +83,8 @@ pub fn get_neighbors_out(node: Node(key, value)) -> set.Set(key) {
 /// with_value(node, "Node A")
 /// // -> Node(key: "A", value: Some("Node A"), outgoing: Set([]), incoming: Set([]))
 /// ```
-pub fn with_value(node: Node(key, value), value: value) -> Node(key, value) {
-  Node(..node, value: option.Some(value))
-}
-
-/// Clears the value of a node.
-///
-/// ## Examples
-///
-/// ```gleam
-/// let node = new("A") |> with_value("Node A")
-/// without_value(node)
-/// // -> Node(key: "A", value: None, outgoing: Set([]), incoming: Set([]))
-/// ```
-pub fn without_value(node: Node(key, value)) -> Node(key, value) {
-  Node(..node, value: option.None)
+pub fn replace_value(node: Node(key, value), value: value) -> Node(key, value) {
+  Node(..node, value: value)
 }
 
 /// Sets the outgoing edges of a node.
