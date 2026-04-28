@@ -22,7 +22,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - A* and Dijkstra implementations reorganised into separate `path/astar` and `path/dijkstra` modules
-- Source code moved into `aonyx_graph/` subfolder in preparation for mono-repo setup
 - Minimum required Gleam version bumped to 1.16.0
 - Minimum required `gleam_stdlib` version bumped to 1.0.0
 
@@ -79,7 +78,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Node and edge customization (labels, weights, values)
 - Support for automatic node creation when adding edges
 
-[Unreleased]: https://github.com/aonyxrocks/aonyx_graph/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/aonyxrocks/aonyx_graph/compare/v2.0.0...HEAD
 [2.0.0]: https://github.com/aonyxrocks/aonyx_graph/compare/v1.1.0...v2.0.0
 [1.1.0]: https://github.com/aonyxrocks/aonyx_graph/compare/v1.0.3...v1.1.0
 [1.0.3]: https://github.com/aonyxrocks/aonyx_graph/compare/v1.0.2...v1.0.3
