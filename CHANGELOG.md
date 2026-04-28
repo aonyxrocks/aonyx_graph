@@ -5,6 +5,14 @@ All notable changes to the aonyx_graph project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Removed
+- Deprecated `graph/astar` and `graph/dijkstra` modules (replaced by `graph/path/astar` and `graph/path/dijkstra` in v2.0.0)
+
+### Documentation
+- Cleaned up comments and examples across source files, README, and tests
+
 ## [2.0.0] - 2026-04-28
 
 ### Breaking Changes
