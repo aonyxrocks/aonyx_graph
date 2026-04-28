@@ -1,6 +1,6 @@
 import gleam/set
 
-/// Represents a node in the graph identified by a key and containing an optional value.
+/// Represents a node in the graph identified by a key and containing a value.
 pub type Node(key, value) {
   Node(key: key, value: value, outgoing: set.Set(key), incoming: set.Set(key))
 }
@@ -9,7 +9,7 @@ pub type NodeKey(key) {
   NodeKey(key: key)
 }
 
-/// Creates a node with the given key, without a value.
+/// Creates a node with the given key and value.
 ///
 /// ## Examples
 ///
@@ -31,7 +31,7 @@ pub fn get_key(node: Node(key, value)) -> NodeKey(key) {
 /// ## Examples
 ///
 /// ```gleam
-/// let node = new("A")
+/// let node = new("A", Nil)
 ///   |> with_outgoing(["B", "C"])
 ///   |> with_incoming(["D"])
 ///
@@ -47,7 +47,7 @@ pub fn get_neighbors(node: Node(key, value)) -> set.Set(key) {
 /// ## Examples
 ///
 /// ```gleam
-/// let node = new("A")
+/// let node = new("A", Nil)
 ///   |> with_outgoing(["B", "C"])
 ///   |> with_incoming(["D", "E"])
 ///
@@ -63,7 +63,7 @@ pub fn get_neighbors_in(node: Node(key, value)) -> set.Set(key) {
 /// ## Examples
 ///
 /// ```gleam
-/// let node = new("A")
+/// let node = new("A", Nil)
 ///   |> with_outgoing(["B", "C"])
 ///   |> with_incoming(["D"])
 ///
@@ -74,14 +74,14 @@ pub fn get_neighbors_out(node: Node(key, value)) -> set.Set(key) {
   node.outgoing
 }
 
-/// Sets the value of a node.
+/// Replaces the value of a node.
 ///
 /// ## Examples
 ///
 /// ```gleam
-/// let node = new("A")
-/// with_value(node, "Node A")
-/// // -> Node(key: "A", value: Some("Node A"), outgoing: Set([]), incoming: Set([]))
+/// let node = new("A", Nil)
+/// replace_value(node, "Node A")
+/// // -> Node(key: "A", value: "Node A", outgoing: Set([]), incoming: Set([]))
 /// ```
 pub fn replace_value(node: Node(key, value), value: value) -> Node(key, value) {
   Node(..node, value: value)
@@ -92,9 +92,9 @@ pub fn replace_value(node: Node(key, value), value: value) -> Node(key, value) {
 /// ## Examples
 ///
 /// ```gleam
-/// let node = new("A")
+/// let node = new("A", Nil)
 /// with_outgoing(node, ["B", "C"])
-/// // -> Node(key: "A", value: None, outgoing: Set(["B", "C"]), incoming: Set([]))
+/// // -> Node(key: "A", value: Nil, outgoing: Set(["B", "C"]), incoming: Set([]))
 /// ```
 pub fn with_outgoing(
   node: Node(key, value),
@@ -108,9 +108,9 @@ pub fn with_outgoing(
 /// ## Examples
 ///
 /// ```gleam
-/// let node = new("A")
+/// let node = new("A", Nil)
 /// with_incoming(node, ["B", "C"])
-/// // -> Node(key: "A", value: None, outgoing: Set([]), incoming: Set(["B", "C"]))
+/// // -> Node(key: "A", value: Nil, outgoing: Set([]), incoming: Set(["B", "C"]))
 /// ```
 pub fn with_incoming(
   node: Node(key, value),

@@ -22,12 +22,12 @@ import gleam/option
 /// // Create a graph representing a grid with coordinates as values
 /// 
 /// let nodes = [
-///   node.new("A") |> node.with_value(#(0, 0))
-///   node.new("B") |> node.with_value(#(1, 0))
-///   node.new("C") |> node.with_value(#(2, 0))
-///   node.new("D") |> node.with_value(#(0, 1))
-///   node.new("E") |> node.with_value(#(1, 1))
-///   node.new("F") |> node.with_value(#(2, 1))
+///   node.new("A", #(0, 0))
+///   node.new("B", #(1, 0))
+///   node.new("C", #(2, 0))
+///   node.new("D", #(0, 1))
+///   node.new("E", #(1, 1))
+///   node.new("F", #(2, 1))
 /// ]
 /// 
 /// let edges = [
@@ -44,8 +44,8 @@ import gleam/option
 /// 
 /// let graph =
 ///   graph.new()
-///   |> list.fold(nodes, _, insert_node)
-///   |> list.fold(edges, _, insert_edge)
+///   |> list.fold(nodes, _, graph.insert_node)
+///   |> list.fold(edges, _, fn(g, edge) { graph.insert_edge(g, edge, #(0, 0)) })
 /// 
 /// // Define Manhattan distance heuristic for our grid
 /// fn manhattan_distance(from, to) {

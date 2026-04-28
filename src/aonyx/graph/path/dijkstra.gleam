@@ -24,7 +24,7 @@ import gleam/option
 ///
 /// let graph =
 ///   graph.new()
-///   |> list.fold(edges, _, graph.insert_edge)
+///   |> list.fold(edges, _, fn(g, edge) { graph.insert_edge(g, edge, Nil) })
 ///
 /// find_path(graph, "A", "C")
 /// // -> Some(["A", "B", "C"]) - Path through B is shorter (3.0) than direct path (5.0)
@@ -37,8 +37,8 @@ import gleam/option
 ///
 /// let graph =
 ///   graph.new()
-///   |> graph.insert_edge(edge.new("A", "B"))
-///   |> graph.insert_edge(edge.new("C", "D"))
+///   |> graph.insert_edge(edge.new("A", "B"), Nil)
+///   |> graph.insert_edge(edge.new("C", "D"), Nil)
 ///
 /// find_path(graph, "A", "D")
 /// // -> None

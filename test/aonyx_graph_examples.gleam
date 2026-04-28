@@ -46,12 +46,11 @@ fn creating_and_modifying_a_graph() {
       edge.new("C", "A") |> edge.with_label("Some label"),
       edge.new("A", "D") |> edge.with_weight(0.5),
       edge.new("D", "F"),
-      // you can also add edges to non-existing nodes.
-      // the nodes will be created automatically.
+      // try_insert_edge requires both endpoint nodes to already exist.
+      // use insert_edge(_, _, default_value) if you want missing nodes to be created automatically.
       edge.new("G", "H"),
     ]
-    |> list.fold(Ok(g), fn(g, e) { result.try(g, graph.try_insert_edge(_, e)) })
-    |> should.be_ok()
+    |> list.fold(g, fn(g, e) { graph.insert_edge(g, e, option.None) })
 
   g |> graph.get_edges() |> list.length() |> should.equal(8)
   g |> graph.get_nodes() |> list.length() |> should.equal(8)
@@ -150,7 +149,7 @@ fn path_finding_with_a_star() {
     ]
     |> list.fold(graph.new(), graph.insert_node)
     |> Ok
-    // add edges with approximate weights (rounded up from the euclidean distance)
+    // add edges with hand-picked weights that approximate the Euclidean distance
     |> result.try(fn(g) {
       g |> graph.try_insert_edge(edge.new("A", "B") |> edge.with_weight(1.0))
     })

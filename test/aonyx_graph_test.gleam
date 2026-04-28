@@ -351,7 +351,7 @@ pub fn find_path_astar_visited_nodes_test() {
   // until a suitable alternative is implemented.
   // let counter = ref.cell(0)
 
-  // Without the zero heuristic (equivalent to Dijkstra), all nodes are visited
+  // With the zero heuristic (equivalent to Dijkstra), all nodes are visited
   // let zero_heuristic = fn(_, _) {
   //   counter |> ref.set(fn(v) { v + 1 })
   //   0.0

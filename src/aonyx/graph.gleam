@@ -6,7 +6,7 @@ import gleam/option
 import gleam/result
 import gleam/set
 
-/// Represents a graph with nodes identified by a key, containing an optional value, with edges having an associated optional label.
+/// Represents a graph with nodes identified by a key and containing a value, with edges that can have optional labels and weights.
 pub opaque type Graph(key, value, label) {
   Graph(
     nodes: dict.Dict(NodeKey(key), Node(key, value)),
@@ -38,8 +38,8 @@ pub fn new() -> Graph(key, value, label) {
 /// 
 /// ```gleam
 /// let graph = new()
-/// |> insert_edge(edge.new("A", "B"))
-/// |> insert_edge(edge.new("B", "C"))
+/// |> insert_edge(edge.new("A", "B"), Nil)
+/// |> insert_edge(edge.new("B", "C"), Nil)
 /// 
 /// get_edges(graph)
 /// // -> [Edge(from: "A", to: "B", ...), Edge(from: "B", to: "C", ...)]
@@ -92,18 +92,24 @@ fn insert_edge_internal(
 /// ```gleam
 /// let graph = new()
 /// let edge = edge.new("A", "B") |> edge.with_weight(5.0)
-/// insert_edge(graph, edge)
+/// try_insert_edge(graph, edge)
 /// // -> Error(Nil)
 /// ```
 /// 
 /// ```gleam
 /// let graph = new()
 /// let edge1 = edge.new("A", "B") |> edge.with_label("connects to")
-/// let graph = insert_edge(graph, edge1)
+/// let graph =
+///   graph
+///   |> insert_node(node.new("A", "Node A"))
+///   |> insert_node(node.new("B", "Node B"))
+/// let graph =
+///   try_insert_edge(graph, edge1)
+///   |> result.unwrap(graph)
 /// 
 /// // Replace with a new edge
 /// let edge2 = edge.new("A", "B") |> edge.with_weight(10.0)
-/// insert_edge(graph, edge2)
+/// try_insert_edge(graph, edge2)
 /// // -> Edge from A to B now has weight 10.0 and no label
 /// ```
 pub fn try_insert_edge(
@@ -122,18 +128,18 @@ pub fn try_insert_edge(
 /// ```gleam
 /// let graph = new()
 /// let edge = edge.new("A", "B") |> edge.with_weight(5.0)
-/// insert_edge_with_default(graph, edge, "Default Value")
+/// insert_edge(graph, edge, "Default Value")
 /// // -> Graph with 2 nodes (A and B) and an edge from A to B with weight 5.0
 /// ```
 /// 
 /// ```gleam
 /// let graph = new()
 /// let edge1 = edge.new("A", "B") |> edge.with_label("connects to")
-/// let graph = insert_edge_with_default(graph, edge1, "Default Value")
+/// let graph = insert_edge(graph, edge1, "Default Value")
 /// 
 /// // Replace with a new edge
 /// let edge2 = edge.new("A", "B") |> edge.with_weight(10.0)
-/// insert_edge_with_default(graph, edge2, "Default Value")
+/// insert_edge(graph, edge2, "Default Value")
 /// // -> Edge from A to B now has weight 10.0 and no label
 /// ```
 pub fn insert_edge(
@@ -208,7 +214,7 @@ fn remove_edge_internal(
 /// ## Examples
 /// 
 /// ```gleam
-/// let graph = new() |> insert_edge(edge.new("A", "B"))
+/// let graph = new() |> insert_edge(edge.new("A", "B"), Nil)
 /// let updated_graph = remove_edge(graph, edge.new("A", "B"))
 /// // -> Graph with nodes A and B but no edges between them
 /// ```
@@ -224,7 +230,9 @@ pub fn remove_edge(
 /// ## Examples
 ///
 /// ```gleam
-/// let graph = new() |> insert_edge(edge.new("A", "B") |> edge.with_weight(5.0))
+/// let graph =
+///   new()
+///   |> insert_edge(edge.new("A", "B") |> edge.with_weight(5.0), Nil)
 /// get_edge(graph, "A", "B")
 /// // -> Ok(Edge(from: "A", to: "B", weight: Some(5.0), label: None))
 /// ```
@@ -250,8 +258,8 @@ pub fn get_edge(
 ///
 /// ```gleam
 /// let graph = new()
-/// |> insert_edge(edge.new("A", "B"))
-/// |> insert_edge(edge.new("B", "C"))
+/// |> insert_edge(edge.new("A", "B"), Nil)
+/// |> insert_edge(edge.new("B", "C"), Nil)
 ///
 /// get_nodes(graph)
 /// // -> [Node(key: "A", ...), Node(key: "B", ...), Node(key: "C", ...)]
@@ -331,7 +339,7 @@ fn insert_node_internal(
 ///
 /// ```gleam
 /// let graph = new()
-/// let node = node.new("A") |> node.with_value("Node A")
+/// let node = node.new("A", "Node A")
 /// insert_node(graph, node)
 /// // -> Graph with node A having value "Node A"
 /// ```
@@ -339,9 +347,8 @@ fn insert_node_internal(
 /// ```gleam
 /// // Adding a node with connections
 /// let graph = new()
-/// let node = node.new("A") 
+/// let node = node.new("A", "Node A") 
 ///   |> node.with_outgoing(["B", "C"])
-///   |> node.with_value("Node A")
 /// insert_node(graph, node)
 /// // -> Graph with node A and edges to B and C
 /// ```
@@ -378,11 +385,10 @@ fn remove_node_internal(
 ///
 /// ```gleam
 /// let graph = new()
-///   |> insert_edge(edge.new("A", "B"))
-///   |> insert_edge(edge.new("B", "C"))
+///   |> insert_edge(edge.new("A", "B"), Nil)
+///   |> insert_edge(edge.new("B", "C"), Nil)
 ///
-/// let node_b = node.new("B")
-/// remove_node(graph, node_b)
+/// remove_node(graph, node.NodeKey("B"))
 /// // -> Graph with nodes A and C, but no edges between them
 /// ```
 pub fn remove_node(
@@ -401,10 +407,10 @@ pub fn remove_node(
 ///
 /// ```gleam
 /// let graph = new()
-///   |> insert_edge(edge.new("A", "B"))
+///   |> insert_edge(edge.new("A", "B"), Nil)
 ///
 /// get_node(graph, "A")
-/// // -> Ok(Node(key: "A", outgoing: Set(["B"]), incoming: Set([]), value: None))
+/// // -> Ok(Node(key: "A", outgoing: Set(["B"]), incoming: Set([]), value: Nil))
 /// ```
 ///
 /// ```gleam
@@ -477,7 +483,7 @@ fn traverse_internal(
 /// If the returned value is `Continue(accumulator)` `fold_breadth_first_until`
 /// will try to move on to the next node or return that accumulator.
 /// 
-/// If the returned value is `Stop(accumulator)` `fold_breadth_first_until`
+/// If the returned value is `Stop` `fold_breadth_first_until`
 /// will stop and return that accumulator.
 /// 
 /// Returns the final accumulator value, or an error if the start node is not found in the graph.
@@ -498,7 +504,7 @@ pub fn fold_breadth_first_until(
 /// If the returned value is `Continue(accumulator)` `fold_depth_first_until`
 /// will try to move on to the next node or return that accumulator.
 /// 
-/// If the returned value is `Stop(accumulator)` `fold_depth_first_until`
+/// If the returned value is `Stop` `fold_depth_first_until`
 /// will stop and return that accumulator.
 /// 
 /// Returns the final accumulator value, or an error if the start node is not found in the graph.
