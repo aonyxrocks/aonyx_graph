@@ -30,14 +30,22 @@ fn creating_and_modifying_a_graph() {
       node.new("C", option.None),
       node.new("D", option.Some("Some value")),
       // you can also add nodes with incoming or outgoing edges.
-      // the edges will be created automatically as well as the target nodes.
+      // the edges will only be created if the target node already exists in the graph.
       node.new("E", option.None)
+        // edge from B will be created because B already exists in the graph
         |> node.with_incoming(["B"])
+        // edge to F will not be created because F does not exist yet
         |> node.with_outgoing(["F"]),
     ]
     |> list.fold(g, graph.insert_node)
 
-  g |> graph.get_nodes() |> list.length() |> should.equal(6)
+  g |> graph.get_nodes() |> list.length() |> should.equal(5)
+
+  let g =
+    g
+    |> graph.insert_node(
+      node.new("F", option.None) |> node.with_incoming(["E"]),
+    )
 
   let g =
     [
@@ -46,11 +54,21 @@ fn creating_and_modifying_a_graph() {
       edge.new("C", "A") |> edge.with_label("Some label"),
       edge.new("A", "D") |> edge.with_weight(0.5),
       edge.new("D", "F"),
-      // try_insert_edge requires both endpoint nodes to already exist.
-      // use insert_edge(_, _, default_value) if you want missing nodes to be created automatically.
       edge.new("G", "H"),
     ]
+    // use insert_edge(_, _, default_value) if you want missing nodes to be created automatically.
     |> list.fold(g, fn(g, e) { graph.insert_edge(g, e, option.None) })
+
+  let g =
+    [
+      edge.new("B", "E"),
+      edge.new("E", "Y"),
+    ]
+    // try_insert_edge requires both endpoint nodes to already exist.
+    |> list.fold(Ok(g), fn(g, e) {
+      g |> result.try(graph.try_insert_edge(_, e))
+    })
+    |> result.unwrap(g)
 
   g |> graph.get_edges() |> list.length() |> should.equal(8)
   g |> graph.get_nodes() |> list.length() |> should.equal(8)
